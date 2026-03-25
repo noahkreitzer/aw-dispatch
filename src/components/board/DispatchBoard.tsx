@@ -46,6 +46,7 @@ export default function DispatchBoard() {
 
   // Init week from routes if empty — store handles DB lookup for auto-copy
   useEffect(() => {
+    let cancelled = false;
     if (assignments.length === 0 && routes.length > 0) {
       const activeRouteIds = routes
         .filter((r) => {
@@ -55,8 +56,11 @@ export default function DispatchBoard() {
           return true;
         })
         .map((r) => r.id);
-      initWeekFromRoutes(currentWeek, activeRouteIds);
+      if (!cancelled) {
+        initWeekFromRoutes(currentWeek, activeRouteIds);
+      }
     }
+    return () => { cancelled = true; };
   }, [currentWeek, assignments.length, routes, initWeekFromRoutes, weekPhase]);
 
   // Pool shows ALL active employees — they can be assigned to multiple days

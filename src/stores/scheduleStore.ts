@@ -195,8 +195,9 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
     if (initInProgress.has(weekKey)) return;
     initInProgress.add(weekKey);
     try {
+    // Double-check after acquiring the lock (StrictMode may have populated it)
     const state = get();
-    if (state.assignments[weekKey]?.length) { initInProgress.delete(weekKey); return; }
+    if (state.assignments[weekKey]?.length) return;
 
     // Check DB first — if week already exists, just fetch it
     const { data: existingDb } = await supabase

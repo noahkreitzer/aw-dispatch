@@ -72,13 +72,15 @@ function VacationEmployee({ employeeId, day, weekKey, name }: {
 
 export default memo(function DayColumn({ day, date, assignments, weekKey, spareSlot, vacationSlot }: DayColumnProps) {
   const employees = useEmployeeStore((s) => s.employees);
+  const spareIds = spareSlot?.employeeIds;
+  const vacationIds = vacationSlot?.employeeIds;
   const spareEmployees = useMemo(
-    () => (spareSlot?.employeeIds ?? []).map((id) => employees.find((e) => e.id === id)).filter(Boolean) as typeof employees,
-    [spareSlot, employees]
+    () => (spareIds ?? []).map((id) => employees.find((e) => e.id === id)).filter(Boolean) as typeof employees,
+    [spareIds, employees]
   );
   const vacationEmployees = useMemo(
-    () => (vacationSlot?.employeeIds ?? []).map((id) => employees.find((e) => e.id === id)).filter(Boolean) as typeof employees,
-    [vacationSlot, employees]
+    () => (vacationIds ?? []).map((id) => employees.find((e) => e.id === id)).filter(Boolean) as typeof employees,
+    [vacationIds, employees]
   );
 
   const { setNodeRef: spareDropRef, isOver: isSpareOver } = useDroppable({
