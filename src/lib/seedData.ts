@@ -1,0 +1,125 @@
+import type { Employee, Truck, Route } from '@/types';
+
+export const seedEmployees: Employee[] = [
+  // Drivers (from actual driver logs)
+  { id: 'e1', name: 'Akeem Campbell', role: 'driver', phone: '', active: true },
+  { id: 'e2', name: 'Bob Earls', role: 'driver', phone: '', active: true },
+  { id: 'e3', name: 'Bryant Umholtz', role: 'driver', phone: '', active: true },
+  { id: 'e4', name: 'Collin Roberts', role: 'driver', phone: '', active: true },
+  { id: 'e5', name: 'Garrett Boyle', role: 'driver', phone: '', active: true },
+  { id: 'e6', name: 'Jesse Kreitzer', role: 'driver', phone: '', active: true },
+  { id: 'e7', name: 'Joseph Langlois', role: 'driver', phone: '', active: true },
+  { id: 'e8', name: 'Justin Eisenhart', role: 'driver', phone: '', active: true },
+  { id: 'e9', name: 'Keith Eisenhart', role: 'driver', phone: '', active: true },
+  { id: 'e10', name: 'Matt Conelin', role: 'driver', phone: '', active: true },
+  { id: 'e11', name: 'Rich Kreitzer', role: 'driver', phone: '', active: true },
+  { id: 'e12', name: 'Ryan Andruchek', role: 'driver', phone: '', active: true },
+  { id: 'e13', name: 'Thomas Franklin', role: 'driver', phone: '', active: true },
+  { id: 'e14', name: 'Tom Pusavage', role: 'driver', phone: '', active: true },
+  // Slingers (from actual driver logs)
+  { id: 's1', name: 'Adam Cragen', role: 'slinger', phone: '', active: true },
+  { id: 's2', name: 'Anthony D\'Agostino', role: 'slinger', phone: '', active: true },
+  { id: 's3', name: 'Cash', role: 'slinger', phone: '', active: true },
+  { id: 's4', name: 'Dave Brode', role: 'slinger', phone: '', active: true },
+  { id: 's5', name: 'Evan', role: 'slinger', phone: '', active: true },
+  { id: 's6', name: 'George', role: 'slinger', phone: '', active: true },
+  { id: 's7', name: 'Jack Weinrich', role: 'slinger', phone: '', active: true },
+  { id: 's8', name: 'Jhonny Diaz', role: 'slinger', phone: '', active: true },
+  { id: 's9', name: 'Joey Stanchek', role: 'slinger', phone: '', active: true },
+  { id: 's10', name: 'Jon Yuskoski', role: 'slinger', phone: '', active: true },
+  { id: 's11', name: 'Magnum Kline', role: 'slinger', phone: '', active: true },
+  { id: 's12', name: 'Marshall', role: 'slinger', phone: '', active: true },
+  { id: 's13', name: 'Noah R', role: 'slinger', phone: '', active: true },
+  { id: 's14', name: 'Patrick Weins', role: 'slinger', phone: '', active: true },
+  { id: 's15', name: 'Thomas O\'Donnell', role: 'slinger', phone: '', active: true },
+  { id: 's16', name: 'Tommy Leedum', role: 'slinger', phone: '', active: true },
+  { id: 's17', name: 'Wilkin Duran', role: 'slinger', phone: '', active: true },
+];
+
+export const seedTrucks: Truck[] = [
+  { id: 't1', number: '101', type: 'rear-load', status: 'active' },
+  { id: 't2', number: '102', type: 'rear-load', status: 'active' },
+  { id: 't3', number: '103', type: 'rear-load', status: 'active' },
+  { id: 't4', number: '105', type: 'rear-load', status: 'active' },
+  { id: 't5', number: '106', type: 'rear-load', status: 'active' },
+  { id: 't6', number: '107', type: 'rear-load', status: 'active' },
+  { id: 't7', number: '109', type: 'rear-load', status: 'active' },
+  { id: 't8', number: '110', type: 'rear-load', status: 'active' },
+  { id: 't9', number: '111', type: 'rear-load', status: 'active' },
+  { id: 't10', number: '112', type: 'rear-load', status: 'active' },
+  { id: 't11', number: '113', type: 'rear-load', status: 'active' },
+  { id: 't12', number: '114', type: 'rear-load', status: 'active' },
+  { id: 't13', number: '150', type: 'rear-load', status: 'active' },
+  { id: 't14', number: '402', type: 'roll-off', status: 'active' },
+];
+
+export const seedRoutes: Route[] = [
+  // Monday routes
+  { id: 'r1', name: 'Pottsville Trash', municipality: 'Pottsville', day: 'Monday', type: 'residential', stops: 180, active: true },
+  { id: 'r2', name: 'Pottsville Recycling', municipality: 'Pottsville', day: 'Monday', type: 'recycling', stops: 90, active: true, biweekly: true, biweeklyPhase: 'even' },
+  { id: 'r3', name: 'Mcadoo Trash', municipality: 'McAdoo', day: 'Monday', type: 'residential', stops: 95, active: true },
+  { id: 'r4', name: 'Mcadoo Recycle', municipality: 'McAdoo', day: 'Monday', type: 'recycling', stops: 60, active: true },
+  { id: 'r5', name: 'Hazle Township Trash', municipality: 'Hazle Township', day: 'Monday', type: 'residential', stops: 140, active: true },
+  { id: 'r6', name: 'Hazle Township Recycling', municipality: 'Hazle Township', day: 'Monday', type: 'recycling', stops: 90, active: true },
+  { id: 'r7', name: 'East Side/Eagle Rock', municipality: 'Eagle Rock', day: 'Monday', type: 'residential', stops: 100, active: true },
+  { id: 'r8', name: 'West Hazleton Trash', municipality: 'West Hazleton', day: 'Monday', type: 'residential', stops: 120, active: true },
+  { id: 'r9', name: 'West Hazleton Recycling', municipality: 'West Hazleton', day: 'Monday', type: 'recycling', stops: 80, active: true },
+  { id: 'r10', name: 'Sheppton', municipality: 'Sheppton', day: 'Monday', type: 'residential', stops: 50, active: true },
+  { id: 'r11', name: 'Little Truck', municipality: 'Various', day: 'Monday', type: 'residential', stops: 30, active: true },
+
+  // Tuesday routes
+  { id: 'r12', name: 'Freeland Trash', municipality: 'Freeland', day: 'Tuesday', type: 'residential', stops: 130, active: true },
+  { id: 'r13', name: 'Hazle Township Trash', municipality: 'Hazle Township', day: 'Tuesday', type: 'residential', stops: 140, active: true },
+  { id: 'r14', name: 'Hazle Township Recycling', municipality: 'Hazle Township', day: 'Tuesday', type: 'recycling', stops: 90, active: true },
+  { id: 'r15', name: 'Mahanoy City Recycle', municipality: 'Mahanoy City', day: 'Tuesday', type: 'recycling', stops: 70, active: true },
+  { id: 'r16', name: 'Orwigsburg Trash', municipality: 'Orwigsburg', day: 'Tuesday', type: 'residential', stops: 110, active: true },
+  { id: 'r16b', name: 'Orwigsburg Recycling', municipality: 'Orwigsburg', day: 'Tuesday', type: 'recycling', stops: 70, active: true, biweekly: true, biweeklyPhase: 'even' },
+  { id: 'r17', name: 'Pottsville Recycling', municipality: 'Pottsville', day: 'Tuesday', type: 'recycling', stops: 90, active: true, biweekly: true, biweeklyPhase: 'odd' },
+  { id: 'r18', name: 'Pottsville Trash', municipality: 'Pottsville', day: 'Tuesday', type: 'residential', stops: 180, active: true },
+  { id: 'r19', name: 'Schuylkill Haven Trash', municipality: 'Schuylkill Haven', day: 'Tuesday', type: 'residential', stops: 125, active: true },
+  { id: 'r20', name: 'Packer', municipality: 'Packer Twp', day: 'Tuesday', type: 'residential', stops: 60, active: true },
+  { id: 'r21', name: 'Little Truck', municipality: 'Various', day: 'Tuesday', type: 'residential', stops: 30, active: true },
+
+  // Wednesday routes
+  { id: 'r22', name: 'Cressona Recycling', municipality: 'Cressona', day: 'Wednesday', type: 'recycling', stops: 70, active: true },
+  { id: 'r23', name: 'Cressona Trash', municipality: 'Cressona', day: 'Wednesday', type: 'residential', stops: 80, active: true },
+  { id: 'r24', name: 'Hazle Township Trash', municipality: 'Hazle Township', day: 'Wednesday', type: 'residential', stops: 140, active: true },
+  { id: 'r25', name: 'Hazle Township Recycling', municipality: 'Hazle Township', day: 'Wednesday', type: 'recycling', stops: 90, active: true },
+  { id: 'r26', name: 'Pottsville Recycling', municipality: 'Pottsville', day: 'Wednesday', type: 'recycling', stops: 90, active: true, biweekly: true, biweeklyPhase: 'even' },
+  { id: 'r27', name: 'Pottsville Trash', municipality: 'Pottsville', day: 'Wednesday', type: 'residential', stops: 180, active: true },
+  { id: 'r28', name: 'Schuylkill Haven Trash', municipality: 'Schuylkill Haven', day: 'Wednesday', type: 'residential', stops: 125, active: true },
+  { id: 'r29', name: 'West Hazleton Trash', municipality: 'West Hazleton', day: 'Wednesday', type: 'residential', stops: 120, active: true },
+  { id: 'r30', name: 'West Hazleton Recycling', municipality: 'West Hazleton', day: 'Wednesday', type: 'recycling', stops: 80, active: true },
+  { id: 'r31', name: 'Little Truck', municipality: 'Various', day: 'Wednesday', type: 'residential', stops: 30, active: true },
+
+  // Thursday routes
+  { id: 'r32', name: 'Branch Township Trash', municipality: 'Branch Twp', day: 'Thursday', type: 'residential', stops: 75, active: true },
+  { id: 'r33', name: 'Freeland Recycle', municipality: 'Freeland', day: 'Thursday', type: 'recycling', stops: 80, active: true },
+  { id: 'r34', name: 'Hazle Township Trash', municipality: 'Hazle Township', day: 'Thursday', type: 'residential', stops: 140, active: true },
+  { id: 'r35', name: 'Mahanoy City Trash', municipality: 'Mahanoy City', day: 'Thursday', type: 'residential', stops: 110, active: true },
+  { id: 'r36', name: 'Newport Township Trash', municipality: 'Newport Twp', day: 'Thursday', type: 'residential', stops: 100, active: true },
+  { id: 'r37', name: 'Pottsville Recycling', municipality: 'Pottsville', day: 'Thursday', type: 'recycling', stops: 90, active: true, biweekly: true, biweeklyPhase: 'odd' },
+  { id: 'r38', name: 'Pottsville Trash', municipality: 'Pottsville', day: 'Thursday', type: 'residential', stops: 180, active: true },
+  { id: 'r39', name: 'Schuylkill Haven Recycling', municipality: 'Schuylkill Haven', day: 'Thursday', type: 'recycling', stops: 80, active: true },
+  { id: 'r40', name: 'Little Truck', municipality: 'Various', day: 'Thursday', type: 'residential', stops: 30, active: true },
+
+  // Friday routes
+  { id: 'r41', name: 'Frackville/Subscription', municipality: 'Frackville', day: 'Friday', type: 'residential', stops: 60, active: true },
+  { id: 'r42', name: 'Gordon Trash/Subscription', municipality: 'Gordon', day: 'Friday', type: 'residential', stops: 45, active: true },
+  { id: 'r43', name: 'Hazle Township Recycling', municipality: 'Hazle Township', day: 'Friday', type: 'recycling', stops: 90, active: true },
+  { id: 'r44', name: 'Hazle Township Trash', municipality: 'Hazle Township', day: 'Friday', type: 'residential', stops: 140, active: true },
+  { id: 'r45', name: 'Newport Township Trash', municipality: 'Newport Twp', day: 'Friday', type: 'residential', stops: 100, active: true },
+  { id: 'r46', name: 'Orwigsburg Trash', municipality: 'Orwigsburg', day: 'Friday', type: 'residential', stops: 110, active: true },
+  { id: 'r46b', name: 'Orwigsburg Recycling', municipality: 'Orwigsburg', day: 'Friday', type: 'recycling', stops: 70, active: true, biweekly: true, biweeklyPhase: 'odd' },
+  { id: 'r47', name: 'Pottsville Recycling', municipality: 'Pottsville', day: 'Friday', type: 'recycling', stops: 90, active: true, biweekly: true, biweeklyPhase: 'even' },
+  { id: 'r48', name: 'Pottsville Trash', municipality: 'Pottsville', day: 'Friday', type: 'residential', stops: 180, active: true },
+  { id: 'r49', name: 'Shenandoah Heights/Subscription', municipality: 'Shenandoah Heights', day: 'Friday', type: 'residential', stops: 55, active: true },
+  { id: 'r50', name: 'Subscription', municipality: 'Various', day: 'Friday', type: 'residential', stops: 40, active: true },
+  { id: 'r51', name: 'Little Truck', municipality: 'Various', day: 'Friday', type: 'residential', stops: 30, active: true },
+
+  // Saturday
+  { id: 'r52', name: 'Saturday Makeup', municipality: 'Various', day: 'Saturday', type: 'residential', stops: 0, active: true },
+];
+
+export const defaultDispatchTemplate =
+  "Hey {name}, you're dispatched for {day}. Truck #{truckNumber} ({truckType}). Route: {routeName}. Crew: Driver - {driverName}{slingers}. Questions? Call dispatch.";
