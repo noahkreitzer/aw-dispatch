@@ -237,9 +237,6 @@ export default function AssignmentCard({ assignment, weekKey, day }: AssignmentC
               ) : (
                 <span className="text-[9px] text-muted-foreground font-mono">Needs driver + truck</span>
               )}
-              {route.stops > 0 && (
-                <span className="text-[9px] text-muted-foreground font-mono">{route.stops} stops</span>
-              )}
             </div>
           </div>
         )}

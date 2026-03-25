@@ -39,7 +39,7 @@ export default function DispatchBoard() {
   const weekDays = useMemo(() => getWeekDays(currentWeek), [currentWeek]);
   const weekPhase = useMemo(() => getWeekPhase(currentWeek), [currentWeek]);
 
-  // Init week from routes if empty — filter biweekly routes, auto-copy crew from previous same-phase week
+  // Init week from routes if empty — filter biweekly routes, auto-copy crew from most recent same-phase week
   useEffect(() => {
     if (assignments.length === 0) {
       const activeRouteIds = routes
@@ -49,9 +49,18 @@ export default function DispatchBoard() {
           return true;
         })
         .map((r) => r.id);
-      // Copy from 2 weeks back (same A/B phase)
-      const samePhaseWeek = navigateWeek(currentWeek, -2);
-      initWeekFromRoutes(currentWeek, activeRouteIds, samePhaseWeek);
+      // Search backwards (in 2-week jumps = same phase) for a week with data
+      const allAssignmentsState = useScheduleStore.getState().assignments;
+      let copyFrom: string | undefined;
+      let searchWeek = currentWeek;
+      for (let i = 0; i < 26; i++) { // search up to ~1 year back
+        searchWeek = navigateWeek(searchWeek, -2);
+        if (allAssignmentsState[searchWeek]?.length) {
+          copyFrom = searchWeek;
+          break;
+        }
+      }
+      initWeekFromRoutes(currentWeek, activeRouteIds, copyFrom);
     }
   }, [currentWeek, assignments.length, routes, initWeekFromRoutes, weekPhase]);
 
