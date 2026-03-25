@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -8,10 +9,28 @@ import EmployeeManager from '@/components/managers/EmployeeManager';
 import TruckManager from '@/components/managers/TruckManager';
 import RouteManager from '@/components/managers/RouteManager';
 import SettingsPage from '@/components/settings/Settings';
+import { useEmployeeStore } from '@/stores/employeeStore';
+import { useTruckStore } from '@/stores/truckStore';
+import { useRouteStore } from '@/stores/routeStore';
+
+function DataLoader() {
+  const fetchEmployees = useEmployeeStore((s) => s.fetchEmployees);
+  const fetchTrucks = useTruckStore((s) => s.fetchTrucks);
+  const fetchRoutes = useRouteStore((s) => s.fetchRoutes);
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchTrucks();
+    fetchRoutes();
+  }, [fetchEmployees, fetchTrucks, fetchRoutes]);
+
+  return null;
+}
 
 export default function App() {
   return (
     <AuthGate>
+      <DataLoader />
       <BrowserRouter>
         <TooltipProvider>
           <Routes>

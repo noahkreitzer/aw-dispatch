@@ -122,4 +122,4 @@ export const seedRoutes: Route[] = [
 ];
 
 export const defaultDispatchTemplate =
-  "Hey {name}, you're dispatched for {day}. Truck #{truckNumber} ({truckType}). Route: {routeName}. Crew: Driver - {driverName}{slingers}. Questions? Call dispatch.";
+  "Hey {name}, you're on {routeName} with {driverName}{slingers}. Truck #{truckNumber}.";
