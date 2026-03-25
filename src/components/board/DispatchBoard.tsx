@@ -15,14 +15,16 @@ import { DAYS } from '@/types';
 import { getISOWeekKey, getWeekDateRange, navigateWeek, getWeekDays, formatDate, getWeekPhase } from '@/lib/weekUtils';
 import DayColumn from './DayColumn';
 import EmployeePool from './EmployeePool';
-import { ChevronLeft, ChevronRight, Copy, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Users, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import WeekUploadModal from './WeekUploadModal';
 
 export default function DispatchBoard() {
   const [currentWeek, setCurrentWeek] = useState(() => getISOWeekKey(new Date()));
   const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
   const [poolOpen, setPoolOpen] = useState(true);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const allAssignments = useScheduleStore((s) => s.assignments);
   const allSpares = useScheduleStore((s) => s.spareSlots);
@@ -251,6 +253,13 @@ export default function DispatchBoard() {
 
           <div className="flex items-center gap-1.5">
             <button
+              onClick={() => setUploadOpen(true)}
+              className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1"
+            >
+              <Upload size={11} />Upload Week
+            </button>
+
+            <button
               onClick={handleCopyPrevWeek}
               className="text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-1"
             >
@@ -314,6 +323,12 @@ export default function DispatchBoard() {
           </div>
         )}
       </DragOverlay>
+
+      <WeekUploadModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onSynced={(weekKey) => setCurrentWeek(weekKey)}
+      />
     </DndContext>
   );
 }

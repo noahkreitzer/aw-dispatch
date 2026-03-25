@@ -22,6 +22,11 @@ interface ScheduleState {
   addToVacation: (weekKey: string, day: DayOfWeek, employeeId: string) => void;
   removeFromVacation: (weekKey: string, day: DayOfWeek, employeeId: string) => void;
   fetchWeek: (weekKey: string) => Promise<void>;
+  importWeekAssignments: (weekKey: string, assignments: Array<{
+    id: string; week_key: string; route_id: string;
+    driver_id: string | null; truck_id: string | null;
+    slinger_ids: string[]; status: string; notes: string;
+  }>) => Promise<void>;
 }
 
 const initInProgress = new Set<string>();
@@ -364,6 +369,30 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
     if (updatedSlot) {
       await supabase.from('dispatch_vacation_slots').upsert(vacationToDb(updatedSlot));
     }
+  },
+
+  importWeekAssignments: async (weekKey, assignments) => {
+    // Delete existing assignments for this week
+    await supabase.from('dispatch_assignments').delete().eq('week_key', weekKey);
+
+    // Insert new assignments in batches
+    for (let i = 0; i < assignments.length; i += 50) {
+      const batch = assignments.slice(i, i + 50).map((a) => ({
+        id: a.id,
+        week_key: a.week_key,
+        route_id: a.route_id,
+        driver_id: a.driver_id,
+        truck_id: a.truck_id,
+        slinger_ids: a.slinger_ids,
+        status: a.status,
+        notes: a.notes,
+        updated_at: new Date().toISOString(),
+      }));
+      await supabase.from('dispatch_assignments').upsert(batch);
+    }
+
+    // Re-fetch to update local state
+    await get().fetchWeek(weekKey);
   },
 
   removeFromVacation: async (weekKey, day, employeeId) => {
