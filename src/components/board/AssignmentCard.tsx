@@ -88,13 +88,20 @@ export default function AssignmentCard({ assignment, weekKey, day }: AssignmentC
     ? 'bg-gray-200 text-gray-500'
     : isReady
     ? 'border-l-green-500'
-    : 'border-l-orange-400';
+    : 'border-l-gray-300';
 
   const typeColor: Record<string, string> = {
     residential: 'bg-blue-100 text-blue-700',
     commercial: 'bg-purple-100 text-purple-700',
     recycling: 'bg-green-100 text-green-700',
     'roll-off': 'bg-orange-100 text-orange-700',
+  };
+
+  const typeLabel: Record<string, string> = {
+    residential: 'Trash',
+    commercial: 'Commercial',
+    recycling: 'Recycling',
+    'roll-off': 'Roll-Off',
   };
 
   const removeSlinger = (sid: string) => {
@@ -124,7 +131,7 @@ export default function AssignmentCard({ assignment, weekKey, day }: AssignmentC
             <div className="flex items-center gap-1">
               <span className="font-semibold truncate">{route.name}</span>
               <Badge className={`text-[9px] px-1 py-0 ${typeColor[route.type] ?? ''}`}>
-                {route.type.slice(0, 3)}
+                {typeLabel[route.type] ?? route.type}
               </Badge>
             </div>
             <div className="text-[10px] text-muted-foreground font-mono truncate">
@@ -225,13 +232,11 @@ export default function AssignmentCard({ assignment, weekKey, day }: AssignmentC
 
             {/* Status */}
             <div className="flex items-center justify-between">
-              <Badge
-                className={`text-[9px] ${
-                  isReady ? 'bg-green-600 text-white' : 'bg-orange-500 text-white'
-                }`}
-              >
-                {isReady ? 'Ready' : 'Incomplete'}
-              </Badge>
+              {isReady ? (
+                <Badge className="text-[9px] bg-green-600 text-white">Ready</Badge>
+              ) : (
+                <span className="text-[9px] text-muted-foreground font-mono">Needs driver + truck</span>
+              )}
               {route.stops > 0 && (
                 <span className="text-[9px] text-muted-foreground font-mono">{route.stops} stops</span>
               )}
