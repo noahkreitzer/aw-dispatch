@@ -44,6 +44,14 @@ export interface SpareSlot {
   employeeIds: string[];
 }
 
+// Vacation slot — employees off for the day
+export interface VacationSlot {
+  id: string;
+  weekKey: string;
+  day: DayOfWeek;
+  employeeIds: string[];
+}
+
 export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 
 export const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

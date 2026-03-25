@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Assignment, SpareSlot, DayOfWeek } from '@/types';
+import type { Assignment, SpareSlot, VacationSlot, DayOfWeek } from '@/types';
 import { DAYS } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { navigateWeek } from '@/lib/weekUtils';
@@ -7,6 +7,7 @@ import { navigateWeek } from '@/lib/weekUtils';
 interface ScheduleState {
   assignments: Record<string, Assignment[]>;
   spareSlots: Record<string, SpareSlot[]>;
+  vacationSlots: Record<string, VacationSlot[]>;
   getWeekAssignments: (weekKey: string) => Assignment[];
   getAssignment: (weekKey: string, assignmentId: string) => Assignment | undefined;
   setWeekAssignments: (weekKey: string, assignments: Assignment[]) => void;
@@ -17,8 +18,13 @@ interface ScheduleState {
   getWeekSpares: (weekKey: string) => SpareSlot[];
   addToSpare: (weekKey: string, day: DayOfWeek, employeeId: string) => void;
   removeFromSpare: (weekKey: string, day: DayOfWeek, employeeId: string) => void;
+  getWeekVacations: (weekKey: string) => VacationSlot[];
+  addToVacation: (weekKey: string, day: DayOfWeek, employeeId: string) => void;
+  removeFromVacation: (weekKey: string, day: DayOfWeek, employeeId: string) => void;
   fetchWeek: (weekKey: string) => Promise<void>;
 }
+
+const initInProgress = new Set<string>();
 
 function generateId(): string {
   return `asgn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -40,6 +46,37 @@ function ensureSpareSlots(weekKey: string, existing: SpareSlot[]): SpareSlot[] {
     }
   }
   return result;
+}
+
+function ensureVacationSlots(weekKey: string, existing: VacationSlot[]): VacationSlot[] {
+  if (existing.length === DAYS.length) return existing;
+  const daySet = new Set(existing.map((s) => s.day));
+  const result = [...existing];
+  for (const day of DAYS) {
+    if (!daySet.has(day)) {
+      result.push({ id: `vac_${weekKey}_${day}`, weekKey, day, employeeIds: [] });
+    }
+  }
+  return result;
+}
+
+function vacationFromDb(row: Record<string, unknown>): VacationSlot {
+  return {
+    id: row.id as string,
+    weekKey: row.week_key as string,
+    day: row.day as DayOfWeek,
+    employeeIds: (row.employee_ids as string[]) || [],
+  };
+}
+
+function vacationToDb(s: VacationSlot): Record<string, unknown> {
+  return {
+    id: s.id,
+    week_key: s.weekKey,
+    day: s.day,
+    employee_ids: s.employeeIds,
+    updated_at: new Date().toISOString(),
+  };
 }
 
 // DB mapping helpers
@@ -92,11 +129,13 @@ function spareToDb(s: SpareSlot): Record<string, unknown> {
 export const useScheduleStore = create<ScheduleState>()((set, get) => ({
   assignments: {},
   spareSlots: {},
+  vacationSlots: {},
 
   fetchWeek: async (weekKey: string) => {
-    const [{ data: aData }, { data: sData }] = await Promise.all([
+    const [{ data: aData }, { data: sData }, { data: vData }] = await Promise.all([
       supabase.from('dispatch_assignments').select('*').eq('week_key', weekKey),
       supabase.from('dispatch_spare_slots').select('*').eq('week_key', weekKey),
+      supabase.from('dispatch_vacation_slots').select('*').eq('week_key', weekKey),
     ]);
     if (aData) {
       const assignments = aData.map((r) => assignmentFromDb(r as Record<string, unknown>));
@@ -105,6 +144,10 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
     if (sData) {
       const spares = ensureSpareSlots(weekKey, sData.map((r) => spareFromDb(r as Record<string, unknown>)));
       set((state) => ({ spareSlots: { ...state.spareSlots, [weekKey]: spares } }));
+    }
+    if (vData) {
+      const vacations = ensureVacationSlots(weekKey, vData.map((r) => vacationFromDb(r as Record<string, unknown>)));
+      set((state) => ({ vacationSlots: { ...state.vacationSlots, [weekKey]: vacations } }));
     }
   },
 
@@ -144,8 +187,11 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
   },
 
   initWeekFromRoutes: async (weekKey, routeIds) => {
+    if (initInProgress.has(weekKey)) return;
+    initInProgress.add(weekKey);
+    try {
     const state = get();
-    if (state.assignments[weekKey]?.length) return;
+    if (state.assignments[weekKey]?.length) { initInProgress.delete(weekKey); return; }
 
     // Check DB first — if week already exists, just fetch it
     const { data: existingDb } = await supabase
@@ -155,24 +201,43 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
       return;
     }
 
-    // Search DB for the most recent previous week with assignments
+    // Find the TWO most recent previous weeks with assignments
+    // (covers both biweekly phases so crew copies correctly for alternating routes)
     let prevAssignments: Assignment[] = [];
     let prevSpares: SpareSlot[] = [];
-    let searchWeek = weekKey;
-    for (let i = 0; i < 52; i++) {
-      searchWeek = navigateWeek(searchWeek, -1);
-      const { data: prevData } = await supabase
-        .from('dispatch_assignments').select('*').eq('week_key', searchWeek).limit(1);
-      if (prevData && prevData.length > 0) {
-        // Found a week with data — fetch all assignments from it
-        const { data: allPrev } = await supabase
-          .from('dispatch_assignments').select('*').eq('week_key', searchWeek);
-        const { data: allPrevSpares } = await supabase
-          .from('dispatch_spare_slots').select('*').eq('week_key', searchWeek);
-        if (allPrev) prevAssignments = allPrev.map((r) => assignmentFromDb(r as Record<string, unknown>));
-        if (allPrevSpares) prevSpares = allPrevSpares.map((r) => spareFromDb(r as Record<string, unknown>));
-        break;
+    const { data: recentWeeks } = await supabase
+      .from('dispatch_assignments')
+      .select('week_key')
+      .lt('week_key', weekKey)
+      .order('week_key', { ascending: false });
+    // Get unique week keys (up to 2)
+    const uniqueWeekKeys: string[] = [];
+    if (recentWeeks) {
+      for (const row of recentWeeks) {
+        const wk = row.week_key as string;
+        if (!uniqueWeekKeys.includes(wk)) uniqueWeekKeys.push(wk);
+        if (uniqueWeekKeys.length >= 2) break;
       }
+    }
+    if (uniqueWeekKeys.length > 0) {
+      // Fetch assignments from both weeks, prefer the more recent one per routeId
+      const [{ data: allPrev }, { data: allPrevSpares }] = await Promise.all([
+        supabase.from('dispatch_assignments').select('*').in('week_key', uniqueWeekKeys),
+        supabase.from('dispatch_spare_slots').select('*').eq('week_key', uniqueWeekKeys[0]),
+      ]);
+      if (allPrev) {
+        const allMapped = allPrev.map((r) => assignmentFromDb(r as Record<string, unknown>));
+        // For each routeId, prefer the assignment from the most recent week
+        const byRoute = new Map<string, Assignment>();
+        // Process older week first, then newer week overwrites
+        for (const wk of [...uniqueWeekKeys].reverse()) {
+          for (const a of allMapped.filter((m) => m.weekKey === wk)) {
+            byRoute.set(a.routeId, a);
+          }
+        }
+        prevAssignments = Array.from(byRoute.values());
+      }
+      if (allPrevSpares) prevSpares = allPrevSpares.map((r) => spareFromDb(r as Record<string, unknown>));
     }
 
     const assignments: Assignment[] = routeIds.map((routeId) => {
@@ -206,6 +271,9 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
     if (dbSpares.length > 0) {
       await supabase.from('dispatch_spare_slots').upsert(dbSpares);
     }
+    } finally {
+      initInProgress.delete(weekKey);
+    }
   },
 
   copyWeek: async (fromWeek, toWeek) => {
@@ -225,6 +293,9 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
       spareSlots: { ...prev.spareSlots, [toWeek]: spares },
     }));
 
+    // Delete old data first, then insert new
+    await supabase.from('dispatch_assignments').delete().eq('week_key', toWeek);
+    await supabase.from('dispatch_spare_slots').delete().eq('week_key', toWeek);
     await supabase.from('dispatch_assignments').upsert(copied.map(assignmentToDb));
     const dbSpares = spares.filter((s) => s.employeeIds.length > 0).map(spareToDb);
     if (dbSpares.length > 0) {
@@ -271,6 +342,46 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
       await supabase.from('dispatch_spare_slots').upsert(spareToDb(updatedSlot));
     }
   },
+
+  getWeekVacations: (weekKey) => {
+    const existing = get().vacationSlots[weekKey] ?? [];
+    return ensureVacationSlots(weekKey, existing);
+  },
+
+  addToVacation: async (weekKey, day, employeeId) => {
+    let updatedSlot: VacationSlot | undefined;
+    set((state) => {
+      const existing = ensureVacationSlots(weekKey, state.vacationSlots[weekKey] ?? []);
+      const updated = existing.map((s) => {
+        if (s.day !== day) return s;
+        if (s.employeeIds.includes(employeeId)) return s;
+        const u = { ...s, employeeIds: [...s.employeeIds, employeeId] };
+        updatedSlot = u;
+        return u;
+      });
+      return { vacationSlots: { ...state.vacationSlots, [weekKey]: updated } };
+    });
+    if (updatedSlot) {
+      await supabase.from('dispatch_vacation_slots').upsert(vacationToDb(updatedSlot));
+    }
+  },
+
+  removeFromVacation: async (weekKey, day, employeeId) => {
+    let updatedSlot: VacationSlot | undefined;
+    set((state) => {
+      const existing = ensureVacationSlots(weekKey, state.vacationSlots[weekKey] ?? []);
+      const updated = existing.map((s) => {
+        if (s.day !== day) return s;
+        const u = { ...s, employeeIds: s.employeeIds.filter((id) => id !== employeeId) };
+        updatedSlot = u;
+        return u;
+      });
+      return { vacationSlots: { ...state.vacationSlots, [weekKey]: updated } };
+    });
+    if (updatedSlot) {
+      await supabase.from('dispatch_vacation_slots').upsert(vacationToDb(updatedSlot));
+    }
+  },
 }));
 
 // Real-time: re-fetch current week when assignments change
@@ -284,6 +395,13 @@ supabase
     }
   })
   .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatch_spare_slots' }, (payload) => {
+    const weekKey = (payload.new as Record<string, unknown>)?.week_key as string
+      || (payload.old as Record<string, unknown>)?.week_key as string;
+    if (weekKey) {
+      useScheduleStore.getState().fetchWeek(weekKey);
+    }
+  })
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatch_vacation_slots' }, (payload) => {
     const weekKey = (payload.new as Record<string, unknown>)?.week_key as string
       || (payload.old as Record<string, unknown>)?.week_key as string;
     if (weekKey) {

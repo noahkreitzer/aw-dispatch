@@ -58,6 +58,16 @@ CREATE TABLE IF NOT EXISTS dispatch_spare_slots (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Vacation slots (crew on vacation per day per week)
+CREATE TABLE IF NOT EXISTS dispatch_vacation_slots (
+  id TEXT PRIMARY KEY,
+  week_key TEXT NOT NULL,
+  day TEXT NOT NULL,
+  employee_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Settings
 CREATE TABLE IF NOT EXISTS dispatch_settings (
   key TEXT PRIMARY KEY,
@@ -68,6 +78,7 @@ CREATE TABLE IF NOT EXISTS dispatch_settings (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_assignments_week ON dispatch_assignments(week_key);
 CREATE INDEX IF NOT EXISTS idx_spare_slots_week ON dispatch_spare_slots(week_key);
+CREATE INDEX IF NOT EXISTS idx_vacation_slots_week ON dispatch_vacation_slots(week_key);
 
 -- Enable Row Level Security (allow all for now - internal tool)
 ALTER TABLE dispatch_employees ENABLE ROW LEVEL SECURITY;
@@ -75,6 +86,7 @@ ALTER TABLE dispatch_trucks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispatch_routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispatch_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispatch_spare_slots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dispatch_vacation_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dispatch_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all" ON dispatch_employees FOR ALL USING (true) WITH CHECK (true);
@@ -82,6 +94,7 @@ CREATE POLICY "Allow all" ON dispatch_trucks FOR ALL USING (true) WITH CHECK (tr
 CREATE POLICY "Allow all" ON dispatch_routes FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON dispatch_assignments FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON dispatch_spare_slots FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON dispatch_vacation_slots FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON dispatch_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- Enable realtime for live updates
@@ -90,3 +103,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE dispatch_spare_slots;
 ALTER PUBLICATION supabase_realtime ADD TABLE dispatch_employees;
 ALTER PUBLICATION supabase_realtime ADD TABLE dispatch_trucks;
 ALTER PUBLICATION supabase_realtime ADD TABLE dispatch_routes;
+ALTER PUBLICATION supabase_realtime ADD TABLE dispatch_vacation_slots;

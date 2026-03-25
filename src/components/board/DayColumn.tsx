@@ -1,10 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
-import type { Assignment, DayOfWeek, SpareSlot } from '@/types';
+import type { Assignment, DayOfWeek, SpareSlot, VacationSlot } from '@/types';
 import { useEmployeeStore } from '@/stores/employeeStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
-import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import AssignmentCard from './AssignmentCard';
 
@@ -14,22 +13,20 @@ interface DayColumnProps {
   assignments: Assignment[];
   weekKey: string;
   spareSlot?: SpareSlot;
+  vacationSlot?: VacationSlot;
 }
 
-const dayColors: Record<DayOfWeek, string> = {
-  Monday: 'border-blue-400',
-  Tuesday: 'border-green-400',
-  Wednesday: 'border-yellow-400',
-  Thursday: 'border-orange-400',
-  Friday: 'border-red-400',
-  Saturday: 'border-purple-400',
+const DAY_COLORS: Record<DayOfWeek, string> = {
+  Monday: 'bg-blue-500',
+  Tuesday: 'bg-emerald-500',
+  Wednesday: 'bg-amber-500',
+  Thursday: 'bg-orange-500',
+  Friday: 'bg-red-500',
+  Saturday: 'bg-purple-500',
 };
 
 function DraggableSpareEmployee({ employeeId, day, weekKey, name }: {
-  employeeId: string;
-  day: DayOfWeek;
-  weekKey: string;
-  name: string;
+  employeeId: string; day: DayOfWeek; weekKey: string; name: string;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `spare-${day}-${employeeId}`,
@@ -40,53 +37,87 @@ function DraggableSpareEmployee({ employeeId, day, weekKey, name }: {
   return (
     <div className="flex items-center gap-1">
       <span
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
-        className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono cursor-grab
-          bg-amber-100 text-amber-800 ${isDragging ? 'opacity-50' : ''}`}
+        ref={setNodeRef} {...listeners} {...attributes}
+        className={`crew-chip inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-grab select-none
+          bg-amber-50 text-amber-700 border border-amber-200 ${isDragging ? 'opacity-30' : ''}`}
       >
         {name}
       </span>
-      <button
-        onClick={() => removeFromSpare(weekKey, day, employeeId)}
-        className="text-muted-foreground hover:text-destructive"
-      >
-        <X size={10} />
+      <button onClick={() => removeFromSpare(weekKey, day, employeeId)}
+        className="p-0.5 rounded hover:bg-red-50 transition-colors">
+        <X size={11} className="text-gray-400 hover:text-red-500" />
       </button>
     </div>
   );
 }
 
-export default function DayColumn({ day, date, assignments, weekKey, spareSlot }: DayColumnProps) {
+function VacationEmployee({ employeeId, day, weekKey, name }: {
+  employeeId: string; day: DayOfWeek; weekKey: string; name: string;
+}) {
+  const removeFromVacation = useScheduleStore((s) => s.removeFromVacation);
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="crew-chip inline-flex items-center px-2 py-1 rounded-md text-xs font-medium
+        bg-red-50 text-red-600 border border-red-200">
+        {name}
+      </span>
+      <button onClick={() => removeFromVacation(weekKey, day, employeeId)}
+        className="p-0.5 rounded hover:bg-red-50 transition-colors">
+        <X size={11} className="text-gray-400 hover:text-red-500" />
+      </button>
+    </div>
+  );
+}
+
+export default memo(function DayColumn({ day, date, assignments, weekKey, spareSlot, vacationSlot }: DayColumnProps) {
   const employees = useEmployeeStore((s) => s.employees);
   const spareEmployees = useMemo(
     () => (spareSlot?.employeeIds ?? []).map((id) => employees.find((e) => e.id === id)).filter(Boolean) as typeof employees,
     [spareSlot, employees]
+  );
+  const vacationEmployees = useMemo(
+    () => (vacationSlot?.employeeIds ?? []).map((id) => employees.find((e) => e.id === id)).filter(Boolean) as typeof employees,
+    [vacationSlot, employees]
   );
 
   const { setNodeRef: spareDropRef, isOver: isSpareOver } = useDroppable({
     id: `spare-drop-${day}`,
     data: { slot: 'spare', day },
   });
+  const { setNodeRef: vacationDropRef, isOver: isVacationOver } = useDroppable({
+    id: `vacation-drop-${day}`,
+    data: { slot: 'vacation', day },
+  });
+
+  const readyCount = assignments.filter((a) => a.status === 'ready').length;
 
   return (
-    <div className="flex-1 min-w-[220px] flex flex-col border-r last:border-r-0">
+    <div className="day-column flex-1 min-w-[260px] flex flex-col border-r last:border-r-0 bg-gray-50/30">
       {/* Day Header */}
-      <div className={`px-3 py-2 bg-white border-b-2 ${dayColors[day]} shrink-0`}>
+      <div className="px-3 py-2 bg-white border-b shrink-0">
         <div className="flex items-center justify-between">
-          <span className="font-heading font-bold text-sm">{day}</span>
-          <span className="font-mono text-xs text-muted-foreground">{date}</span>
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${DAY_COLORS[day]}`} />
+            <span className="font-bold text-sm">{day}</span>
+            <span className="text-[10px] text-gray-400 font-mono">{date}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono">
+            <span className="text-gray-400">{assignments.length}</span>
+            {readyCount > 0 && readyCount === assignments.length && (
+              <span className="text-green-500 font-bold">✓</span>
+            )}
+            {readyCount > 0 && readyCount < assignments.length && (
+              <span className="text-green-500">{readyCount}/{assignments.length}</span>
+            )}
+          </div>
         </div>
-        <span className="font-mono text-[10px] text-muted-foreground">
-          {assignments.length} route{assignments.length !== 1 ? 's' : ''}
-        </span>
       </div>
 
-      {/* Cards */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-muted/30">
+      {/* Cards - GPU accelerated scroll */}
+      <div className="flex-1 overflow-y-auto gpu-scroll p-1.5 space-y-1.5">
         {assignments.length === 0 && (
-          <div className="text-center text-xs text-muted-foreground py-4 font-mono">
+          <div className="text-center text-xs text-gray-400 py-8 font-medium">
             No routes
           </div>
         )}
@@ -99,33 +130,42 @@ export default function DayColumn({ day, date, assignments, weekKey, spareSlot }
           />
         ))}
 
-        {/* Spare / Extra Crew Slot */}
+        {/* Vacation zone */}
         <div
-          ref={spareDropRef}
-          className={`rounded border-2 border-dashed p-2 min-h-[40px] transition-colors mt-2
-            ${isSpareOver ? 'border-[#F5C400] bg-[#F5C400]/10' : 'border-amber-300/50 bg-amber-50/30'}`}
+          ref={vacationDropRef}
+          className={`rounded-lg border-2 border-dashed p-2 transition-all duration-150
+            ${isVacationOver ? 'border-red-400 bg-red-50 scale-[1.01]' : 'border-red-200/30 bg-red-50/10'}`}
         >
-          <div className="flex items-center gap-1 mb-1">
-            <Badge className="text-[9px] bg-amber-500 text-white">SPARE</Badge>
-            <span className="text-[10px] text-muted-foreground font-mono">Extra crew</span>
-          </div>
-          {spareEmployees.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {spareEmployees.map((emp) => (
-                <DraggableSpareEmployee
-                  key={emp.id}
-                  employeeId={emp.id}
-                  day={day}
-                  weekKey={weekKey}
-                  name={emp.name}
-                />
+          <span className="text-[9px] font-bold text-red-400 uppercase tracking-wider">Off / Vacation</span>
+          {vacationEmployees.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {vacationEmployees.map((emp) => (
+                <VacationEmployee key={emp.id} employeeId={emp.id} day={day} weekKey={weekKey} name={emp.name} />
               ))}
             </div>
           ) : (
-            <span className="text-[10px] text-muted-foreground font-mono">Drop spare crew here</span>
+            <p className="text-[9px] text-gray-300 mt-0.5">Drop here</p>
+          )}
+        </div>
+
+        {/* Spare zone */}
+        <div
+          ref={spareDropRef}
+          className={`rounded-lg border-2 border-dashed p-2 transition-all duration-150
+            ${isSpareOver ? 'border-amber-400 bg-amber-50 scale-[1.01]' : 'border-amber-200/30 bg-amber-50/10'}`}
+        >
+          <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider">Spare</span>
+          {spareEmployees.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {spareEmployees.map((emp) => (
+                <DraggableSpareEmployee key={emp.id} employeeId={emp.id} day={day} weekKey={weekKey} name={emp.name} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-[9px] text-gray-300 mt-0.5">Drop here</p>
           )}
         </div>
       </div>
     </div>
   );
-}
+});

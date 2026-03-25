@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import { useRouteStore } from '@/stores/routeStore';
@@ -6,12 +6,7 @@ import { useEmployeeStore } from '@/stores/employeeStore';
 import { useTruckStore } from '@/stores/truckStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import type { Assignment, DayOfWeek } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { MessageSquare, ChevronDown, ChevronUp, X, Power } from 'lucide-react';
+import { MessageSquare, X, Power } from 'lucide-react';
 import DispatchModal from './DispatchModal';
 
 interface AssignmentCardProps {
@@ -36,17 +31,30 @@ function DraggableEmployee({ employeeId, assignmentId, name, role }: {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono cursor-grab
-        ${role === 'driver' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'}
-        ${isDragging ? 'opacity-50' : ''}`}
+      className={`crew-chip inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium cursor-grab select-none
+        ${role === 'driver' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}
+        ${isDragging ? 'opacity-30' : ''}`}
     >
       {name}
     </span>
   );
 }
 
-export default function AssignmentCard({ assignment, weekKey, day }: AssignmentCardProps) {
-  const [expanded, setExpanded] = useState(true);
+const TYPE_STYLES: Record<string, string> = {
+  residential: 'bg-blue-500',
+  commercial: 'bg-purple-500',
+  recycling: 'bg-emerald-500',
+  'roll-off': 'bg-orange-500',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  residential: 'Trash',
+  commercial: 'Commercial',
+  recycling: 'Recycling',
+  'roll-off': 'Roll-Off',
+};
+
+export default memo(function AssignmentCard({ assignment, weekKey, day }: AssignmentCardProps) {
   const [dispatchOpen, setDispatchOpen] = useState(false);
 
   const routes = useRouteStore((s) => s.routes);
@@ -84,162 +92,114 @@ export default function AssignmentCard({ assignment, weekKey, day }: AssignmentC
 
   if (!route) return null;
 
-  const statusColor = isOff
-    ? 'bg-gray-200 text-gray-500'
-    : isReady
-    ? 'border-l-green-500'
-    : 'border-l-gray-300';
-
-  const typeColor: Record<string, string> = {
-    residential: 'bg-blue-100 text-blue-700',
-    commercial: 'bg-purple-100 text-purple-700',
-    recycling: 'bg-green-100 text-green-700',
-    'roll-off': 'bg-orange-100 text-orange-700',
-  };
-
-  const typeLabel: Record<string, string> = {
-    residential: 'Trash',
-    commercial: 'Commercial',
-    recycling: 'Recycling',
-    'roll-off': 'Roll-Off',
-  };
-
   const removeSlinger = (sid: string) => {
     updateAssignment(weekKey, assignment.id, {
       slingerIds: assignment.slingerIds.filter((id) => id !== sid),
     });
   };
-
   const removeDriver = () => {
     updateAssignment(weekKey, assignment.id, { driverId: null });
   };
-
   const toggleOff = () => {
     updateAssignment(weekKey, assignment.id, {
       status: isOff ? 'incomplete' : 'off',
     });
   };
 
+  if (isOff) {
+    return (
+      <div className="route-card rounded-lg bg-gray-100 px-3 py-1.5 flex items-center justify-between opacity-50">
+        <span className="text-xs font-medium text-gray-500 line-through">{route.name}</span>
+        <button onClick={toggleOff} className="p-1 rounded hover:bg-gray-200 transition-colors">
+          <Power size={12} className="text-red-400" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div
-        className={`rounded border-l-4 bg-white shadow-sm text-xs ${statusColor} ${isOff ? 'opacity-50' : ''}`}
-      >
-        {/* Header */}
-        <div className="px-2 py-1.5 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              <span className="font-semibold truncate">{route.name}</span>
-              <Badge className={`text-[9px] px-1 py-0 ${typeColor[route.type] ?? ''}`}>
-                {typeLabel[route.type] ?? route.type}
-              </Badge>
+      <div className={`route-card rounded-lg border bg-white overflow-hidden ${isReady ? 'border-green-200' : 'border-gray-200'}`}>
+        {/* Header bar — route name on its own line for full visibility */}
+        <div className={`px-2.5 py-1.5 ${isReady ? 'bg-green-50' : 'bg-gray-50'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${TYPE_STYLES[route.type] ?? 'bg-gray-400'}`} />
+              <span className="font-bold text-[11px] leading-tight">{route.name}</span>
             </div>
-            <div className="text-[10px] text-muted-foreground font-mono truncate">
-              {route.municipality}
-              {truck && <> · Truck #{truck.number}</>}
+            <div className="flex items-center gap-0.5 shrink-0 ml-1">
+              <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold text-white ${TYPE_STYLES[route.type] ?? 'bg-gray-400'}`}>
+                {TYPE_LABELS[route.type] ?? route.type}
+              </span>
+              {isReady && (
+                <button onClick={() => setDispatchOpen(true)} className="p-0.5 rounded hover:bg-green-100 transition-colors">
+                  <MessageSquare size={12} className="text-green-600" />
+                </button>
+              )}
+              <button onClick={toggleOff} className="p-0.5 rounded hover:bg-gray-200 transition-colors">
+                <Power size={11} className="text-gray-400" />
+              </button>
             </div>
-          </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            {isReady && !isOff && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDispatchOpen(true)}>
-                <MessageSquare size={12} className="text-green-600" />
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={toggleOff}>
-              <Power size={12} className={isOff ? 'text-red-500' : 'text-muted-foreground'} />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </Button>
           </div>
         </div>
 
-        {expanded && !isOff && (
-          <div className="px-2 pb-2 space-y-1.5">
-            {/* Truck Select */}
-            <div>
-              <Select
-                value={assignment.truckId ?? 'none'}
-                onValueChange={(v) =>
-                  updateAssignment(weekKey, assignment.id, { truckId: v === 'none' ? null : v })
-                }
-              >
-                <SelectTrigger className="h-6 text-[10px] font-mono">
-                  <SelectValue placeholder="Assign truck..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No truck</SelectItem>
-                  {activeTrucks.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      #{t.number} ({t.type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="px-2.5 py-1.5 space-y-1.5">
+          {/* Truck */}
+          <select
+            value={assignment.truckId ?? ''}
+            onChange={(e) => updateAssignment(weekKey, assignment.id, { truckId: e.target.value || null })}
+            className="w-full text-[11px] font-mono px-2 py-1 rounded border border-gray-200 bg-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none transition-colors"
+          >
+            <option value="">Select truck...</option>
+            {activeTrucks.map((t) => (
+              <option key={t.id} value={t.id}>
+                #{t.number} — {t.type}
+              </option>
+            ))}
+          </select>
 
-            {/* Driver Drop Zone */}
-            <div
-              ref={driverDropRef}
-              className={`rounded border border-dashed p-1.5 min-h-[28px] transition-colors
-                ${isDriverOver ? 'border-[#F5C400] bg-[#F5C400]/10' : 'border-gray-300'}
-                ${!driver ? 'flex items-center justify-center' : ''}`}
-            >
-              {driver ? (
-                <div className="flex items-center justify-between">
-                  <DraggableEmployee
-                    employeeId={driver.id}
-                    assignmentId={assignment.id}
-                    name={driver.name}
-                    role="driver"
-                  />
-                  <button onClick={removeDriver} className="text-muted-foreground hover:text-destructive">
-                    <X size={10} />
-                  </button>
-                </div>
-              ) : (
-                <span className="text-[10px] text-muted-foreground font-mono">Drop driver here</span>
-              )}
-            </div>
-
-            {/* Slinger Drop Zone */}
-            <div
-              ref={slingerDropRef}
-              className={`rounded border border-dashed p-1.5 min-h-[28px] transition-colors
-                ${isSlingerOver ? 'border-[#F5C400] bg-[#F5C400]/10' : 'border-gray-200'}
-                ${slingers.length === 0 ? 'flex items-center justify-center' : ''}`}
-            >
-              {slingers.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {slingers.map((s) => (
-                    <div key={s.id} className="flex items-center gap-0.5">
-                      <DraggableEmployee
-                        employeeId={s.id}
-                        assignmentId={assignment.id}
-                        name={s.name}
-                        role="slinger"
-                      />
-                      <button onClick={() => removeSlinger(s.id)} className="text-muted-foreground hover:text-destructive">
-                        <X size={10} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-[10px] text-muted-foreground font-mono">Drop slinger(s) here</span>
-              )}
-            </div>
-
-            {/* Status */}
-            <div className="flex items-center justify-between">
-              {isReady ? (
-                <Badge className="text-[9px] bg-green-600 text-white">Ready</Badge>
-              ) : (
-                <span className="text-[9px] text-muted-foreground font-mono">Needs driver + truck</span>
-              )}
-            </div>
+          {/* Driver drop zone */}
+          <div
+            ref={driverDropRef}
+            className={`rounded border px-2 py-1.5 min-h-[28px] transition-all duration-150
+              ${isDriverOver ? 'border-yellow-400 bg-yellow-50 scale-[1.01]' : 'border-dashed border-gray-200'}
+              ${!driver ? 'flex items-center justify-center' : ''}`}
+          >
+            {driver ? (
+              <div className="flex items-center justify-between gap-1">
+                <DraggableEmployee employeeId={driver.id} assignmentId={assignment.id} name={driver.name} role="driver" />
+                <button onClick={removeDriver} className="p-0.5 rounded hover:bg-red-50 transition-colors shrink-0">
+                  <X size={11} className="text-gray-300 hover:text-red-500" />
+                </button>
+              </div>
+            ) : (
+              <span className="text-[10px] text-gray-300">+ Driver</span>
+            )}
           </div>
-        )}
+
+          {/* Slinger drop zone */}
+          <div
+            ref={slingerDropRef}
+            className={`rounded border px-2 py-1.5 min-h-[28px] transition-all duration-150
+              ${isSlingerOver ? 'border-yellow-400 bg-yellow-50 scale-[1.01]' : 'border-dashed border-gray-100'}
+              ${slingers.length === 0 ? 'flex items-center justify-center' : ''}`}
+          >
+            {slingers.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {slingers.map((s) => (
+                  <div key={s.id} className="flex items-center gap-0.5">
+                    <DraggableEmployee employeeId={s.id} assignmentId={assignment.id} name={s.name} role="slinger" />
+                    <button onClick={() => removeSlinger(s.id)} className="p-0.5 rounded hover:bg-red-50 transition-colors">
+                      <X size={11} className="text-gray-300 hover:text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span className="text-[10px] text-gray-300">+ Slinger(s)</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {dispatchOpen && driver && truck && (
@@ -252,4 +212,4 @@ export default function AssignmentCard({ assignment, weekKey, day }: AssignmentC
       )}
     </>
   );
-}
+});

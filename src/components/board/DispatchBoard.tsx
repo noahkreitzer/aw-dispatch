@@ -15,10 +15,9 @@ import { DAYS } from '@/types';
 import { getISOWeekKey, getWeekDateRange, navigateWeek, getWeekDays, formatDate, getWeekPhase } from '@/lib/weekUtils';
 import DayColumn from './DayColumn';
 import EmployeePool from './EmployeePool';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Calendar, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 export default function DispatchBoard() {
   const [currentWeek, setCurrentWeek] = useState(() => getISOWeekKey(new Date()));
@@ -27,15 +26,19 @@ export default function DispatchBoard() {
 
   const allAssignments = useScheduleStore((s) => s.assignments);
   const allSpares = useScheduleStore((s) => s.spareSlots);
+  const allVacations = useScheduleStore((s) => s.vacationSlots);
   const initWeekFromRoutes = useScheduleStore((s) => s.initWeekFromRoutes);
   const updateAssignment = useScheduleStore((s) => s.updateAssignment);
   const copyWeek = useScheduleStore((s) => s.copyWeek);
   const addToSpare = useScheduleStore((s) => s.addToSpare);
   const removeFromSpare = useScheduleStore((s) => s.removeFromSpare);
+  const addToVacation = useScheduleStore((s) => s.addToVacation);
+  const removeFromVacation = useScheduleStore((s) => s.removeFromVacation);
   const routes = useRouteStore((s) => s.routes);
   const employees = useEmployeeStore((s) => s.employees);
   const assignments = useMemo(() => allAssignments[currentWeek] ?? [], [allAssignments, currentWeek]);
   const spareSlots = useMemo(() => allSpares[currentWeek] ?? [], [allSpares, currentWeek]);
+  const vacationSlots = useMemo(() => allVacations[currentWeek] ?? [], [allVacations, currentWeek]);
   const weekDays = useMemo(() => getWeekDays(currentWeek), [currentWeek]);
   const weekPhase = useMemo(() => getWeekPhase(currentWeek), [currentWeek]);
 
@@ -45,6 +48,7 @@ export default function DispatchBoard() {
       const activeRouteIds = routes
         .filter((r) => {
           if (!r.active) return false;
+          if (r.day === 'Saturday') return false; // Saturday is manual only
           if (r.biweekly && r.biweeklyPhase !== weekPhase) return false;
           return true;
         })
@@ -53,7 +57,7 @@ export default function DispatchBoard() {
     }
   }, [currentWeek, assignments.length, routes, initWeekFromRoutes, weekPhase]);
 
-  // Find assigned employees across all assignments + spares this week
+  // Find assigned employees across all assignments + spares + vacations this week
   const assignedEmployeeIds = useMemo(() => {
     const ids = new Set<string>();
     for (const a of assignments) {
@@ -63,8 +67,11 @@ export default function DispatchBoard() {
     for (const s of spareSlots) {
       for (const eid of s.employeeIds) ids.add(eid);
     }
+    for (const v of vacationSlots) {
+      for (const eid of v.employeeIds) ids.add(eid);
+    }
     return ids;
-  }, [assignments, spareSlots]);
+  }, [assignments, spareSlots, vacationSlots]);
 
   const unassignedEmployees = useMemo(
     () => employees.filter((e) => e.active && !assignedEmployeeIds.has(e.id)),
@@ -90,14 +97,14 @@ export default function DispatchBoard() {
 
     const dropData = over.data.current as {
       assignmentId?: string;
-      slot: 'driver' | 'slinger' | 'spare';
+      slot: 'driver' | 'slinger' | 'spare' | 'vacation';
       day?: string;
     } | undefined;
     if (!dropData) return;
 
     const { assignmentId, slot } = dropData;
 
-    // Remove from any current assignment or spare first
+    // Remove from any current assignment, spare, or vacation first
     for (const a of assignments) {
       if (a.driverId === employeeId) {
         updateAssignment(currentWeek, a.id, { driverId: null });
@@ -112,6 +119,16 @@ export default function DispatchBoard() {
       if (s.employeeIds.includes(employeeId)) {
         removeFromSpare(currentWeek, s.day, employeeId);
       }
+    }
+    for (const v of vacationSlots) {
+      if (v.employeeIds.includes(employeeId)) {
+        removeFromVacation(currentWeek, v.day, employeeId);
+      }
+    }
+
+    if (slot === 'vacation' && dropData.day) {
+      addToVacation(currentWeek, dropData.day as typeof DAYS[number], employeeId);
+      return;
     }
 
     if (slot === 'spare' && dropData.day) {
@@ -141,11 +158,17 @@ export default function DispatchBoard() {
     }
   };
 
-  const handleCopyPrevWeek = () => {
+  const handleCopyPrevWeek = async () => {
     const prevWeek = navigateWeek(currentWeek, -1);
+    await useScheduleStore.getState().fetchWeek(prevWeek);
     const prevAssignments = useScheduleStore.getState().getWeekAssignments(prevWeek);
     if (prevAssignments.length === 0) {
       toast.error('No assignments in previous week to copy');
+      return;
+    }
+    const hasCrew = prevAssignments.some((a) => a.driverId || a.slingerIds.length > 0);
+    if (!hasCrew) {
+      toast.error('Previous week has no crew assigned to copy');
       return;
     }
     copyWeek(prevWeek, currentWeek);
@@ -158,49 +181,85 @@ export default function DispatchBoard() {
 
   const isCurrentWeek = currentWeek === getISOWeekKey(new Date());
 
+  // Count vacation employees this week
+  const vacationCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const v of vacationSlots) {
+      for (const eid of v.employeeIds) ids.add(eid);
+    }
+    return ids.size;
+  }, [vacationSlots]);
+
+  const readyCount = useMemo(() => assignments.filter((a) => a.status === 'ready').length, [assignments]);
+  const incompleteCount = useMemo(() => assignments.filter((a) => a.status === 'incomplete').length, [assignments]);
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col h-[calc(100vh-56px)]">
+      <div className="flex flex-col h-[calc(100vh-48px)]">
         {/* Week Navigation Bar */}
-        <div className="bg-white border-b px-4 py-2 flex items-center justify-between shrink-0">
+        <div className="bg-white border-b px-3 py-2 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))}>
-              <ChevronLeft size={16} />
-            </Button>
-            <div className="text-center min-w-[200px]">
-              <p className="font-heading font-bold text-sm">{currentWeek}</p>
-              <p className="font-mono text-xs text-muted-foreground">{getWeekDateRange(currentWeek)}</p>
-            </div>
-            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))}>
-              <ChevronRight size={16} />
-            </Button>
-            {!isCurrentWeek && (
-              <Button variant="outline" size="sm" onClick={() => setCurrentWeek(getISOWeekKey(new Date()))}>
-                <Calendar size={14} className="mr-1" /> Today
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={handleCopyPrevWeek}>
-              <Copy size={14} className="mr-1" /> Copy Prev Week
-            </Button>
-            <Badge variant="outline" className="font-mono text-[10px]">
-              {weekPhase === 'even' ? 'A' : 'B'} Week
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-mono text-xs">
-              {assignments.filter((a) => a.status === 'ready').length} Ready
-            </Badge>
-            <Badge variant="outline" className="font-mono text-xs text-orange-600">
-              {assignments.filter((a) => a.status === 'incomplete').length} Incomplete
-            </Badge>
-            <Button
-              variant={poolOpen ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPoolOpen(!poolOpen)}
-              className="font-mono text-xs"
+            {/* Nav arrows + week info */}
+            <button
+              onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              Crew Pool ({unassignedEmployees.length})
-            </Button>
+              <ChevronLeft size={16} />
+            </button>
+            <div className="text-center whitespace-nowrap">
+              <p className="font-bold text-[13px] leading-tight">{getWeekDateRange(currentWeek)}</p>
+              <p className="text-[9px] text-gray-400 font-mono">{currentWeek}</p>
+            </div>
+            <button
+              onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+
+            {!isCurrentWeek && (
+              <button
+                onClick={() => setCurrentWeek(getISOWeekKey(new Date()))}
+                className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                Today
+              </button>
+            )}
+
+            <div className="h-5 w-px bg-gray-200 mx-1" />
+
+            {/* Phase badge */}
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full text-white ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
+              {weekPhase === 'even' ? 'Pottsville Recycling' : 'Orwigsburg Recycling'}
+            </span>
+
+            {/* Stats inline */}
+            <span className="text-[11px] font-mono text-green-600 font-bold">{readyCount}<span className="text-gray-300 font-normal">/{assignments.length}</span></span>
+            {vacationCount > 0 && <span className="text-[11px] font-mono text-red-400">{vacationCount} off</span>}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleCopyPrevWeek}
+              className="text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-1"
+            >
+              <Copy size={11} />Copy
+            </button>
+
+            <Link to="/employees">
+              <button className="text-[11px] font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-1">
+                <Users size={11} />Crew
+              </button>
+            </Link>
+
+            <button
+              onClick={() => setPoolOpen(!poolOpen)}
+              className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors ${
+                poolOpen ? 'bg-gray-900 text-white' : 'border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Pool ({unassignedEmployees.length})
+            </button>
           </div>
         </div>
 
@@ -214,6 +273,7 @@ export default function DispatchBoard() {
                 return route?.day === day;
               });
               const daySpare = spareSlots.find((s) => s.day === day);
+              const dayVacation = vacationSlots.find((v) => v.day === day);
               return (
                 <DayColumn
                   key={day}
@@ -222,6 +282,7 @@ export default function DispatchBoard() {
                   assignments={dayAssignments}
                   weekKey={currentWeek}
                   spareSlot={daySpare}
+                  vacationSlot={dayVacation}
                 />
               );
             })}
@@ -238,7 +299,7 @@ export default function DispatchBoard() {
         {activeEmployee && (
           <div className="px-3 py-1.5 bg-[#F5C400] text-[#1A1A1A] rounded shadow-lg font-mono text-sm font-semibold cursor-grabbing">
             {activeEmployee.name}
-            <Badge className="ml-2 text-[10px]" variant="secondary">{activeEmployee.role}</Badge>
+            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-white/30 font-bold">{activeEmployee.role}</span>
           </div>
         )}
       </DragOverlay>
