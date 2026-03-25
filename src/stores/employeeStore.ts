@@ -29,23 +29,43 @@ export const useEmployeeStore = create<EmployeeState>()((set, get) => ({
     if (error) { console.error('Failed to fetch employees:', error); return; }
     if (data.length === 0) {
       // Seed initial data
-      const { error: seedError } = await supabase.from('dispatch_employees').upsert(seedEmployees);
+      const seedRows = seedEmployees.map((e) => ({
+        id: e.id, name: e.name, role: e.role, phone: e.phone, active: e.active,
+        can_drive: e.canDrive ?? false,
+      }));
+      const { error: seedError } = await supabase.from('dispatch_employees').upsert(seedRows);
       if (seedError) console.error('Failed to seed employees:', seedError);
       set({ employees: seedEmployees, loaded: true });
     } else {
-      set({ employees: data as Employee[], loaded: true });
+      // Map snake_case DB columns to camelCase
+      const mapped = data.map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        name: row.name as string,
+        role: row.role as 'driver' | 'slinger',
+        phone: row.phone as string,
+        active: row.active as boolean,
+        canDrive: (row.can_drive as boolean) ?? false,
+      }));
+      set({ employees: mapped, loaded: true });
     }
   },
   addEmployee: async (emp) => {
     const newEmp = { ...emp, id: generateId() };
     set((state) => ({ employees: [...state.employees, newEmp] }));
-    await supabase.from('dispatch_employees').insert(newEmp);
+    const dbRow = { id: newEmp.id, name: newEmp.name, role: newEmp.role, phone: newEmp.phone, active: newEmp.active, can_drive: newEmp.canDrive ?? false };
+    await supabase.from('dispatch_employees').insert(dbRow);
   },
   updateEmployee: async (id, updates) => {
     set((state) => ({
       employees: state.employees.map((e) => (e.id === id ? { ...e, ...updates } : e)),
     }));
-    await supabase.from('dispatch_employees').update(updates).eq('id', id);
+    // Map canDrive -> can_drive for DB
+    const dbUpdates: Record<string, unknown> = { ...updates };
+    if ('canDrive' in dbUpdates) {
+      dbUpdates.can_drive = dbUpdates.canDrive;
+      delete dbUpdates.canDrive;
+    }
+    await supabase.from('dispatch_employees').update(dbUpdates).eq('id', id);
   },
   deleteEmployee: async (id) => {
     set((state) => ({ employees: state.employees.filter((e) => e.id !== id) }));

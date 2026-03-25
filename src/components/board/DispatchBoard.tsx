@@ -57,25 +57,10 @@ export default function DispatchBoard() {
     }
   }, [currentWeek, assignments.length, routes, initWeekFromRoutes, weekPhase]);
 
-  // Find assigned employees across all assignments + spares + vacations this week
-  const assignedEmployeeIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const a of assignments) {
-      if (a.driverId) ids.add(a.driverId);
-      for (const sid of a.slingerIds) ids.add(sid);
-    }
-    for (const s of spareSlots) {
-      for (const eid of s.employeeIds) ids.add(eid);
-    }
-    for (const v of vacationSlots) {
-      for (const eid of v.employeeIds) ids.add(eid);
-    }
-    return ids;
-  }, [assignments, spareSlots, vacationSlots]);
-
-  const unassignedEmployees = useMemo(
-    () => employees.filter((e) => e.active && !assignedEmployeeIds.has(e.id)),
-    [employees, assignedEmployeeIds]
+  // Pool shows ALL active employees — they can be assigned to multiple days
+  const activeEmployees = useMemo(
+    () => employees.filter((e) => e.active),
+    [employees]
   );
 
   const sensors = useSensors(
@@ -103,26 +88,53 @@ export default function DispatchBoard() {
     if (!dropData) return;
 
     const { assignmentId, slot } = dropData;
+    const targetDay = dropData.day;
 
-    // Remove from any current assignment, spare, or vacation first
-    for (const a of assignments) {
-      if (a.driverId === employeeId) {
-        updateAssignment(currentWeek, a.id, { driverId: null });
+    // Determine source info from drag data
+    const sourceData = active.data.current as { employeeId?: string; assignmentId?: string; type?: string } | undefined;
+    const isFromPool = !sourceData?.type; // pool items have no type
+
+    // Figure out which day the source belongs to
+    let sourceDay: string | undefined;
+    if (sourceData?.type === 'assigned' && sourceData.assignmentId) {
+      const srcAssignment = assignments.find((a) => a.id === sourceData.assignmentId);
+      if (srcAssignment) {
+        const srcRoute = routes.find((r) => r.id === srcAssignment.routeId);
+        sourceDay = srcRoute?.day;
       }
-      if (a.slingerIds.includes(employeeId)) {
-        updateAssignment(currentWeek, a.id, {
-          slingerIds: a.slingerIds.filter((id) => id !== employeeId),
-        });
-      }
+    } else if (sourceData?.type === 'spare') {
+      // spare drag id format: spare-${day}-${employeeId}
+      const parts = (active.id as string).split('-');
+      sourceDay = parts[1]; // day name
     }
-    for (const s of spareSlots) {
-      if (s.employeeIds.includes(employeeId)) {
-        removeFromSpare(currentWeek, s.day, employeeId);
+
+    // If dragging from an existing slot (not pool), remove from source
+    // Only remove from same-day slots to allow multi-day assignments
+    if (!isFromPool) {
+      // Determine the effective day for removal
+      const dayToRemoveFrom = sourceDay || targetDay;
+
+      for (const a of assignments) {
+        const aRoute = routes.find((r) => r.id === a.routeId);
+        if (aRoute?.day !== dayToRemoveFrom) continue; // only same day
+        if (a.driverId === employeeId) {
+          updateAssignment(currentWeek, a.id, { driverId: null });
+        }
+        if (a.slingerIds.includes(employeeId)) {
+          updateAssignment(currentWeek, a.id, {
+            slingerIds: a.slingerIds.filter((id) => id !== employeeId),
+          });
+        }
       }
-    }
-    for (const v of vacationSlots) {
-      if (v.employeeIds.includes(employeeId)) {
-        removeFromVacation(currentWeek, v.day, employeeId);
+      for (const s of spareSlots) {
+        if (s.day === dayToRemoveFrom && s.employeeIds.includes(employeeId)) {
+          removeFromSpare(currentWeek, s.day, employeeId);
+        }
+      }
+      for (const v of vacationSlots) {
+        if (v.day === dayToRemoveFrom && v.employeeIds.includes(employeeId)) {
+          removeFromVacation(currentWeek, v.day, employeeId);
+        }
       }
     }
 
@@ -139,7 +151,7 @@ export default function DispatchBoard() {
     if (!assignmentId) return;
 
     if (slot === 'driver') {
-      if (employee.role !== 'driver') {
+      if (employee.role !== 'driver' && !employee.canDrive) {
         toast.error(`${employee.name} is a slinger, not a driver`);
         return;
       }
@@ -257,7 +269,7 @@ export default function DispatchBoard() {
                 poolOpen ? 'bg-gray-900 text-white' : 'border border-gray-200 hover:bg-gray-50'
               }`}
             >
-              Pool ({unassignedEmployees.length})
+              Pool ({activeEmployees.length})
             </button>
           </div>
         </div>
@@ -289,7 +301,7 @@ export default function DispatchBoard() {
 
           {/* Employee Pool Sidebar */}
           {poolOpen && (
-            <EmployeePool employees={unassignedEmployees} />
+            <EmployeePool employees={activeEmployees} />
           )}
         </div>
       </div>

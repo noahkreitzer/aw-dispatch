@@ -4,6 +4,7 @@ export interface Employee {
   role: 'driver' | 'slinger';
   phone: string;
   active: boolean;
+  canDrive?: boolean; // slingers who can also drive
 }
 
 export interface Truck {

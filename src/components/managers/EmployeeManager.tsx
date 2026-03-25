@@ -41,6 +41,7 @@ const emptyEmployee: Omit<Employee, 'id'> = {
   role: 'slinger',
   phone: '',
   active: true,
+  canDrive: false,
 };
 
 export default function EmployeeManager() {
@@ -65,7 +66,7 @@ export default function EmployeeManager() {
   };
 
   const openEdit = (emp: Employee) => {
-    setForm({ name: emp.name, role: emp.role, phone: emp.phone, active: emp.active });
+    setForm({ name: emp.name, role: emp.role, phone: emp.phone, active: emp.active, canDrive: emp.canDrive ?? false });
     setEditingId(emp.id);
     setEditOpen(true);
   };
@@ -288,9 +289,16 @@ export default function EmployeeManager() {
               <TableRow key={emp.id} className={!emp.active ? 'opacity-50' : ''}>
                 <TableCell className="font-medium">{emp.name}</TableCell>
                 <TableCell>
-                  <Badge variant={emp.role === 'driver' ? 'default' : 'secondary'} className="font-mono text-xs">
-                    {emp.role}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant={emp.role === 'driver' ? 'default' : 'secondary'} className="font-mono text-xs">
+                      {emp.role}
+                    </Badge>
+                    {emp.canDrive && emp.role === 'slinger' && (
+                      <Badge variant="outline" className="font-mono text-[10px] border-blue-300 text-blue-600">
+                        +DRV
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="font-mono text-sm">
                   {emp.phone ? formatPhone(emp.phone) : (
@@ -348,6 +356,20 @@ export default function EmployeeManager() {
                 </SelectContent>
               </Select>
             </div>
+            {form.role === 'slinger' && (
+              <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={form.canDrive ?? false}
+                  onChange={(e) => setForm({ ...form, canDrive: e.target.checked })}
+                  className="rounded accent-blue-600"
+                  id="candrive-check"
+                />
+                <Label htmlFor="candrive-check" className="font-mono text-xs cursor-pointer">
+                  Can also drive <span className="text-muted-foreground">(dual role)</span>
+                </Label>
+              </div>
+            )}
             <div>
               <Label className="font-mono text-xs">Phone</Label>
               <Input

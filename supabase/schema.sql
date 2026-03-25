@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS dispatch_employees (
   role TEXT NOT NULL CHECK (role IN ('driver', 'slinger')),
   phone TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT true,
+  can_drive BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

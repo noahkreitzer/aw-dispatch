@@ -17,9 +17,9 @@ function DraggablePoolEmployee({ employee }: { employee: Employee }) {
         ${isDragging ? 'opacity-20' : ''}`}
     >
       <span className="text-xs font-medium truncate">{employee.name}</span>
-      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ml-2
-        ${employee.role === 'driver' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
-        {employee.role === 'driver' ? 'DRV' : 'SLG'}
+      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ml-1
+        ${employee.role === 'driver' ? 'bg-blue-100 text-blue-600' : employee.canDrive ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+        {employee.role === 'driver' ? 'DRV' : employee.canDrive ? 'DRV/SLG' : 'SLG'}
       </span>
     </div>
   );

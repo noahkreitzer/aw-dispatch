@@ -18,6 +18,7 @@ export const seedEmployees: Employee[] = [
   { id: 'e14', name: 'Tom Pusavage', role: 'driver', phone: '', active: true },
   { id: 'e15', name: 'Noah Kreitzer', role: 'driver', phone: '', active: true },
   { id: 'e16', name: 'Josh Kreitzer', role: 'driver', phone: '', active: true },
+  { id: 'e17', name: 'Doug Howell', role: 'driver', phone: '', active: true },
   // Slingers (from actual driver logs)
   { id: 's1', name: 'Adam Cragen', role: 'slinger', phone: '', active: true },
   { id: 's2', name: 'Anthony D\'Agostino', role: 'slinger', phone: '', active: true },
