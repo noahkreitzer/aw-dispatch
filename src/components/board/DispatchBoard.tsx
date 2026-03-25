@@ -39,7 +39,7 @@ export default function DispatchBoard() {
   const weekDays = useMemo(() => getWeekDays(currentWeek), [currentWeek]);
   const weekPhase = useMemo(() => getWeekPhase(currentWeek), [currentWeek]);
 
-  // Init week from routes if empty — filter biweekly routes, then auto-copy crew from previous same-phase week
+  // Init week from routes if empty — filter biweekly routes, auto-copy crew from previous same-phase week
   useEffect(() => {
     if (assignments.length === 0) {
       const activeRouteIds = routes
@@ -49,34 +49,11 @@ export default function DispatchBoard() {
           return true;
         })
         .map((r) => r.id);
-      initWeekFromRoutes(currentWeek, activeRouteIds);
-
-      // Auto-copy crew from the previous week that had the same phase (2 weeks back)
+      // Copy from 2 weeks back (same A/B phase)
       const samePhaseWeek = navigateWeek(currentWeek, -2);
-      const prevAssignments = useScheduleStore.getState().getWeekAssignments(samePhaseWeek);
-      if (prevAssignments.length > 0) {
-        // Match by routeId and copy driver/slinger/truck assignments
-        const newAssignments = useScheduleStore.getState().getWeekAssignments(currentWeek);
-        for (const newA of newAssignments) {
-          const prev = prevAssignments.find((p) => p.routeId === newA.routeId);
-          if (prev && prev.status !== 'off') {
-            updateAssignment(currentWeek, newA.id, {
-              driverId: prev.driverId,
-              slingerIds: prev.slingerIds,
-              truckId: prev.truckId,
-            });
-          }
-        }
-        // Also copy spare slots
-        const prevSpares = useScheduleStore.getState().getWeekSpares(samePhaseWeek);
-        for (const spare of prevSpares) {
-          for (const eid of spare.employeeIds) {
-            addToSpare(currentWeek, spare.day, eid);
-          }
-        }
-      }
+      initWeekFromRoutes(currentWeek, activeRouteIds, samePhaseWeek);
     }
-  }, [currentWeek, assignments.length, routes, initWeekFromRoutes, updateAssignment, addToSpare, weekPhase]);
+  }, [currentWeek, assignments.length, routes, initWeekFromRoutes, weekPhase]);
 
   // Find assigned employees across all assignments + spares this week
   const assignedEmployeeIds = useMemo(() => {

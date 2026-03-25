@@ -11,7 +11,7 @@ interface ScheduleState {
   setWeekAssignments: (weekKey: string, assignments: Assignment[]) => void;
   upsertAssignment: (weekKey: string, assignment: Assignment) => void;
   updateAssignment: (weekKey: string, assignmentId: string, updates: Partial<Assignment>) => void;
-  initWeekFromRoutes: (weekKey: string, routeIds: string[]) => void;
+  initWeekFromRoutes: (weekKey: string, routeIds: string[], copyFromWeek?: string) => void;
   copyWeek: (fromWeek: string, toWeek: string) => void;
   // Spare slots
   getWeekSpares: (weekKey: string) => SpareSlot[];
@@ -72,20 +72,29 @@ export const useScheduleStore = create<ScheduleState>()(
           });
           return { assignments: { ...state.assignments, [weekKey]: updated } };
         }),
-      initWeekFromRoutes: (weekKey, routeIds) =>
+      initWeekFromRoutes: (weekKey, routeIds, copyFromWeek) =>
         set((state) => {
           if (state.assignments[weekKey]?.length) return state;
-          const assignments: Assignment[] = routeIds.map((routeId) => ({
-            id: generateId(),
-            weekKey,
-            routeId,
-            truckId: null,
-            driverId: null,
-            slingerIds: [],
-            status: 'incomplete' as const,
-            notes: '',
-          }));
-          const spares = ensureSpareSlots(weekKey, []);
+          const prevAssignments = copyFromWeek ? (state.assignments[copyFromWeek] ?? []) : [];
+          const assignments: Assignment[] = routeIds.map((routeId) => {
+            const prev = prevAssignments.find((p) => p.routeId === routeId && p.status !== 'off');
+            const a: Assignment = {
+              id: generateId(),
+              weekKey,
+              routeId,
+              truckId: prev?.truckId ?? null,
+              driverId: prev?.driverId ?? null,
+              slingerIds: prev?.slingerIds ?? [],
+              status: 'incomplete' as const,
+              notes: '',
+            };
+            return { ...a, status: computeStatus(a) };
+          });
+          // Copy spare slots from source week
+          const prevSpares = copyFromWeek ? (state.spareSlots[copyFromWeek] ?? []) : [];
+          const spares = ensureSpareSlots(weekKey, prevSpares.map((s) => ({
+            ...s, id: `spare_${weekKey}_${s.day}`, weekKey,
+          })));
           return {
             assignments: { ...state.assignments, [weekKey]: assignments },
             spareSlots: { ...state.spareSlots, [weekKey]: spares },
