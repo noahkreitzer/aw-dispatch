@@ -191,7 +191,6 @@ export default function DispatchBoard() {
   }, [vacationSlots]);
 
   const readyCount = useMemo(() => assignments.filter((a) => a.status === 'ready').length, [assignments]);
-  const incompleteCount = useMemo(() => assignments.filter((a) => a.status === 'incomplete').length, [assignments]);
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

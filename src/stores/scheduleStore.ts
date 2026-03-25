@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Assignment, SpareSlot, VacationSlot, DayOfWeek } from '@/types';
 import { DAYS } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { navigateWeek } from '@/lib/weekUtils';
+
 
 interface ScheduleState {
   assignments: Record<string, Assignment[]>;
