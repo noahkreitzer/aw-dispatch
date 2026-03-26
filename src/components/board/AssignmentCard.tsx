@@ -6,13 +6,15 @@ import { useEmployeeStore } from '@/stores/employeeStore';
 import { useTruckStore } from '@/stores/truckStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import type { Assignment, DayOfWeek } from '@/types';
-import { MessageSquare, X, Power } from 'lucide-react';
+import { MessageSquare, X, Power, AlertTriangle } from 'lucide-react';
 import DispatchModal from './DispatchModal';
+import type { Conflict } from '@/lib/conflicts';
 
 interface AssignmentCardProps {
   assignment: Assignment;
   weekKey: string;
   day: DayOfWeek;
+  conflicts?: Conflict[];
 }
 
 function DraggableEmployee({ employeeId, assignmentId, name, role }: {
@@ -54,7 +56,7 @@ const TYPE_LABELS: Record<string, string> = {
   'roll-off': 'Roll-Off',
 };
 
-export default memo(function AssignmentCard({ assignment, weekKey, day }: AssignmentCardProps) {
+export default memo(function AssignmentCard({ assignment, weekKey, day, conflicts = [] }: AssignmentCardProps) {
   const [dispatchOpen, setDispatchOpen] = useState(false);
 
   const routes = useRouteStore((s) => s.routes);
@@ -119,9 +121,24 @@ export default memo(function AssignmentCard({ assignment, weekKey, day }: Assign
 
   return (
     <>
-      <div className={`route-card rounded-lg border bg-white overflow-hidden ${isReady ? 'border-green-200' : 'border-gray-200'}`}>
+      <div className={`route-card rounded-lg border bg-white overflow-hidden ${
+        conflicts.length > 0 ? 'border-red-400 ring-1 ring-red-200' : isReady ? 'border-green-200' : 'border-gray-200'
+      }`}>
+        {/* Conflict indicator */}
+        {conflicts.length > 0 && (
+          <div className="bg-red-50 px-2.5 py-1 flex items-center gap-1.5 border-b border-red-200">
+            <AlertTriangle size={10} className="text-red-500 shrink-0" />
+            <span className="text-[9px] font-bold text-red-600 truncate">
+              {conflicts.map((c) => {
+                if (c.type === 'driver-double-booked') return `${c.employeeName} drives 2 routes`;
+                if (c.type === 'truck-double-booked') return `Truck #${c.truckNumber} on 2 routes`;
+                return `${c.employeeName} slings 2 routes`;
+              }).join(' | ')}
+            </span>
+          </div>
+        )}
         {/* Header bar — route name on its own line for full visibility */}
-        <div className={`px-2.5 py-1.5 ${isReady ? 'bg-green-50' : 'bg-gray-50'}`}>
+        <div className={`px-2.5 py-1.5 ${conflicts.length > 0 ? 'bg-red-50/50' : isReady ? 'bg-green-50' : 'bg-gray-50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className={`w-2 h-2 rounded-full shrink-0 ${TYPE_STYLES[route.type] ?? 'bg-gray-400'}`} />

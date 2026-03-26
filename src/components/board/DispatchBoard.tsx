@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   DndContext,
   type DragEndEvent,
@@ -11,11 +11,17 @@ import {
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { useRouteStore } from '@/stores/routeStore';
 import { useEmployeeStore } from '@/stores/employeeStore';
+import { useTruckStore } from '@/stores/truckStore';
+import { useUndoStore } from '@/stores/undoStore';
 import { DAYS } from '@/types';
 import { getISOWeekKey, getWeekDateRange, navigateWeek, getWeekDays, formatDate, getWeekPhase } from '@/lib/weekUtils';
+import { detectConflicts } from '@/lib/conflicts';
+import { autoAssign } from '@/lib/autoAssign';
 import DayColumn from './DayColumn';
 import EmployeePool from './EmployeePool';
-import { ChevronLeft, ChevronRight, Copy, Users, Upload } from 'lucide-react';
+import ConflictBanner from './ConflictBanner';
+import AutoAssignModal from './AutoAssignModal';
+import { ChevronLeft, ChevronRight, Copy, Users, Upload, Undo2, Redo2, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import WeekUploadModal from './WeekUploadModal';
@@ -25,12 +31,14 @@ export default function DispatchBoard() {
   const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
   const [poolOpen, setPoolOpen] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [autoAssignOpen, setAutoAssignOpen] = useState(false);
 
   const allAssignments = useScheduleStore((s) => s.assignments);
   const allSpares = useScheduleStore((s) => s.spareSlots);
   const allVacations = useScheduleStore((s) => s.vacationSlots);
   const initWeekFromRoutes = useScheduleStore((s) => s.initWeekFromRoutes);
   const updateAssignment = useScheduleStore((s) => s.updateAssignment);
+  const setWeekAssignments = useScheduleStore((s) => s.setWeekAssignments);
   const copyWeek = useScheduleStore((s) => s.copyWeek);
   const addToSpare = useScheduleStore((s) => s.addToSpare);
   const removeFromSpare = useScheduleStore((s) => s.removeFromSpare);
@@ -38,6 +46,8 @@ export default function DispatchBoard() {
   const removeFromVacation = useScheduleStore((s) => s.removeFromVacation);
   const routes = useRouteStore((s) => s.routes);
   const employees = useEmployeeStore((s) => s.employees);
+  const trucks = useTruckStore((s) => s.trucks);
+  const { pushSnapshot, undo, redo, canUndo, canRedo } = useUndoStore();
   const assignments = useMemo(() => allAssignments[currentWeek] ?? [], [allAssignments, currentWeek]);
   const spareSlots = useMemo(() => allSpares[currentWeek] ?? [], [allSpares, currentWeek]);
   const vacationSlots = useMemo(() => allVacations[currentWeek] ?? [], [allVacations, currentWeek]);
@@ -63,11 +73,115 @@ export default function DispatchBoard() {
     return () => { cancelled = true; };
   }, [currentWeek, assignments.length, routes, initWeekFromRoutes, weekPhase]);
 
+  // Conflict detection
+  const conflicts = useMemo(
+    () => detectConflicts(assignments, routes, employees, trucks),
+    [assignments, routes, employees, trucks]
+  );
+
   // Pool shows ALL active employees — they can be assigned to multiple days
   const activeEmployees = useMemo(
     () => employees.filter((e) => e.active),
     [employees]
   );
+
+  // Save snapshot before mutations (for undo)
+  const saveSnapshot = useCallback((label: string) => {
+    pushSnapshot({
+      weekKey: currentWeek,
+      assignments: JSON.parse(JSON.stringify(assignments)),
+      spareSlots: JSON.parse(JSON.stringify(spareSlots)),
+      vacationSlots: JSON.parse(JSON.stringify(vacationSlots)),
+      label,
+      timestamp: Date.now(),
+    });
+  }, [currentWeek, assignments, spareSlots, vacationSlots, pushSnapshot]);
+
+  // Undo/Redo handler
+  const handleUndo = useCallback(() => {
+    const snapshot = undo();
+    if (!snapshot) return;
+    // Restore assignment state from snapshot
+    setWeekAssignments(snapshot.weekKey, snapshot.assignments);
+    // Persist restored assignments to DB
+    for (const a of snapshot.assignments) {
+      useScheduleStore.getState().updateAssignment(snapshot.weekKey, a.id, a);
+    }
+    toast.success(`Undo: ${snapshot.label}`);
+  }, [undo, setWeekAssignments]);
+
+  const handleRedo = useCallback(() => {
+    const snapshot = redo();
+    if (!snapshot) return;
+    setWeekAssignments(snapshot.weekKey, snapshot.assignments);
+    for (const a of snapshot.assignments) {
+      useScheduleStore.getState().updateAssignment(snapshot.weekKey, a.id, a);
+    }
+    toast.success(`Redo: ${snapshot.label}`);
+  }, [redo, setWeekAssignments]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMeta = e.metaKey || e.ctrlKey;
+      if (isMeta && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (isMeta && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        handleRedo();
+      } else if (e.key === 'ArrowLeft' && !isMeta && !e.shiftKey && document.activeElement === document.body) {
+        setCurrentWeek(navigateWeek(currentWeek, -1));
+      } else if (e.key === 'ArrowRight' && !isMeta && !e.shiftKey && document.activeElement === document.body) {
+        setCurrentWeek(navigateWeek(currentWeek, 1));
+      } else if (isMeta && e.key === 't') {
+        e.preventDefault();
+        setCurrentWeek(getISOWeekKey(new Date()));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo, handleRedo, currentWeek]);
+
+  // Auto-assign handlers
+  const handleAutoAssignPreview = useCallback(() => {
+    // Fetch prev week assignments for pattern matching
+    const prevWeekKey = navigateWeek(currentWeek, -1);
+    const prevAssignments = allAssignments[prevWeekKey] ?? [];
+    return autoAssign({
+      weekKey: currentWeek,
+      assignments,
+      routes,
+      employees,
+      trucks,
+      vacationSlots,
+      spareSlots,
+      prevAssignments,
+    });
+  }, [currentWeek, assignments, routes, employees, trucks, vacationSlots, spareSlots, allAssignments]);
+
+  const handleAutoAssignConfirm = useCallback((result: ReturnType<typeof autoAssign>) => {
+    saveSnapshot('Auto-assign');
+    // Apply all changes to the store + DB
+    for (const a of result.assignments) {
+      const existing = assignments.find((e) => e.id === a.id);
+      if (!existing) continue;
+      // Only update if something changed
+      if (
+        a.driverId !== existing.driverId ||
+        a.truckId !== existing.truckId ||
+        JSON.stringify(a.slingerIds) !== JSON.stringify(existing.slingerIds) ||
+        a.status !== existing.status
+      ) {
+        updateAssignment(currentWeek, a.id, {
+          driverId: a.driverId,
+          truckId: a.truckId,
+          slingerIds: a.slingerIds,
+        });
+      }
+    }
+    toast.success(`Applied ${result.changes.length} auto-assignments`);
+  }, [assignments, currentWeek, updateAssignment, saveSnapshot]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -81,6 +195,8 @@ export default function DispatchBoard() {
     setActiveEmployeeId(null);
     const { active, over } = event;
     if (!over) return;
+    // Save snapshot for undo before making changes
+    saveSnapshot('Drag assignment');
 
     const employeeId = active.id as string;
     const employee = employees.find((e) => e.id === employeeId);
@@ -256,11 +372,39 @@ export default function DispatchBoard() {
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Undo / Redo */}
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo()}
+              title="Undo (Ctrl+Z)"
+              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Undo2 size={13} />
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo()}
+              title="Redo (Ctrl+Shift+Z)"
+              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Redo2 size={13} />
+            </button>
+
+            <div className="h-5 w-px bg-gray-200" />
+
+            {/* Auto-Assign */}
+            <button
+              onClick={() => setAutoAssignOpen(true)}
+              className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1"
+            >
+              <Wand2 size={11} />Auto-Fill
+            </button>
+
             <button
               onClick={() => setUploadOpen(true)}
               className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1"
             >
-              <Upload size={11} />Upload Week
+              <Upload size={11} />Upload
             </button>
 
             <button
@@ -287,6 +431,9 @@ export default function DispatchBoard() {
           </div>
         </div>
 
+        {/* Conflict Banner */}
+        <ConflictBanner conflicts={conflicts} />
+
         {/* Board */}
         <div className="flex-1 flex overflow-hidden">
           {/* Day Columns */}
@@ -298,6 +445,7 @@ export default function DispatchBoard() {
               });
               const daySpare = spareSlots.find((s) => s.day === day);
               const dayVacation = vacationSlots.find((v) => v.day === day);
+              const dayConflicts = conflicts.filter((c) => c.day === day);
               return (
                 <DayColumn
                   key={day}
@@ -307,6 +455,7 @@ export default function DispatchBoard() {
                   weekKey={currentWeek}
                   spareSlot={daySpare}
                   vacationSlot={dayVacation}
+                  conflicts={dayConflicts}
                 />
               );
             })}
@@ -332,6 +481,13 @@ export default function DispatchBoard() {
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onSynced={(weekKey) => setCurrentWeek(weekKey)}
+      />
+
+      <AutoAssignModal
+        open={autoAssignOpen}
+        onClose={() => setAutoAssignOpen(false)}
+        onPreview={handleAutoAssignPreview}
+        onConfirm={handleAutoAssignConfirm}
       />
     </DndContext>
   );

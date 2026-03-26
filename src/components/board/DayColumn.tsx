@@ -2,6 +2,7 @@ import { useMemo, memo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import type { Assignment, DayOfWeek, SpareSlot, VacationSlot } from '@/types';
+import type { Conflict } from '@/lib/conflicts';
 import { useEmployeeStore } from '@/stores/employeeStore';
 import { useScheduleStore } from '@/stores/scheduleStore';
 import { X } from 'lucide-react';
@@ -14,6 +15,7 @@ interface DayColumnProps {
   weekKey: string;
   spareSlot?: SpareSlot;
   vacationSlot?: VacationSlot;
+  conflicts?: Conflict[];
 }
 
 const DAY_COLORS: Record<DayOfWeek, string> = {
@@ -70,7 +72,7 @@ function VacationEmployee({ employeeId, day, weekKey, name }: {
   );
 }
 
-export default memo(function DayColumn({ day, date, assignments, weekKey, spareSlot, vacationSlot }: DayColumnProps) {
+export default memo(function DayColumn({ day, date, assignments, weekKey, spareSlot, vacationSlot, conflicts = [] }: DayColumnProps) {
   const employees = useEmployeeStore((s) => s.employees);
   const spareIds = spareSlot?.employeeIds;
   const vacationIds = vacationSlot?.employeeIds;
@@ -129,6 +131,7 @@ export default memo(function DayColumn({ day, date, assignments, weekKey, spareS
             assignment={assignment}
             weekKey={weekKey}
             day={day}
+            conflicts={conflicts.filter((c) => c.assignmentIds.includes(assignment.id))}
           />
         ))}
 
