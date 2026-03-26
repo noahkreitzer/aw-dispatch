@@ -7,17 +7,20 @@ import type { AutoAssignResult } from '@/lib/autoAssign';
 interface AutoAssignModalProps {
   open: boolean;
   onClose: () => void;
-  onPreview: () => AutoAssignResult | null;
+  onPreview: () => Promise<AutoAssignResult | null>;
   onConfirm: (result: AutoAssignResult) => void;
 }
 
 export default function AutoAssignModal({ open, onClose, onPreview, onConfirm }: AutoAssignModalProps) {
   const [preview, setPreview] = useState<AutoAssignResult | null>(null);
+  const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  const handlePreview = () => {
-    const result = onPreview();
+  const handlePreview = async () => {
+    setLoading(true);
+    const result = await onPreview();
     setPreview(result);
+    setLoading(false);
   };
 
   const handleConfirm = async () => {
@@ -32,6 +35,7 @@ export default function AutoAssignModal({ open, onClose, onPreview, onConfirm }:
 
   const handleClose = () => {
     setPreview(null);
+    setLoading(false);
     setApplying(false);
     onClose();
   };
@@ -45,7 +49,7 @@ export default function AutoAssignModal({ open, onClose, onPreview, onConfirm }:
             Smart Auto-Assign
           </DialogTitle>
           <DialogDescription>
-            Automatically fill missing drivers, trucks, and slingers using previous-week patterns and workload balancing.
+            Fills empty slots using driver logs from the correct biweekly rotation. Pottsville weeks pull from the last Pottsville week, Orwigsburg weeks pull from the last Orwigsburg week.
           </DialogDescription>
         </DialogHeader>
 
@@ -54,17 +58,21 @@ export default function AutoAssignModal({ open, onClose, onPreview, onConfirm }:
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700 space-y-1">
               <p className="font-bold">How it works:</p>
               <ul className="list-disc pl-4 space-y-0.5">
+                <li>Pulls driver/truck/slinger from same-phase week's logs (2 weeks back for biweekly routes)</li>
+                <li>Regular routes use the most recent week's driver logs</li>
                 <li>Skips employees on vacation or in spare pool</li>
-                <li>Prefers last week's driver/truck/slinger for each route</li>
                 <li>Balances workload — assigns least-busy crew first</li>
-                <li>Matches truck types to route types (recycling truck for recycling routes, etc.)</li>
+                <li>Matches truck types to route types</li>
                 <li>Never double-books anyone on the same day</li>
                 <li>Only fills empty slots — won't overwrite existing assignments</li>
               </ul>
             </div>
-            <Button onClick={handlePreview} className="w-full" variant="default">
-              <Wand2 size={14} className="mr-2" />
-              Preview Changes
+            <Button onClick={handlePreview} disabled={loading} className="w-full" variant="default">
+              {loading ? (
+                <><Loader2 size={14} className="mr-2 animate-spin" />Loading driver logs...</>
+              ) : (
+                <><Wand2 size={14} className="mr-2" />Preview Changes</>
+              )}
             </Button>
           </div>
         ) : (

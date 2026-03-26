@@ -143,22 +143,37 @@ export default function DispatchBoard() {
     return () => window.removeEventListener('keydown', handler);
   }, [handleUndo, handleRedo, currentWeek]);
 
-  // Auto-assign handlers
-  const handleAutoAssignPreview = useCallback(() => {
-    // Fetch prev week assignments for pattern matching
+  // Auto-assign handlers — phase-aware: pulls driver logs from the correct biweekly rotation
+  const handleAutoAssignPreview = useCallback(async () => {
+    const store = useScheduleStore.getState();
+
+    // Previous week (1 week back) — for regular (non-biweekly) route driver logs
     const prevWeekKey = navigateWeek(currentWeek, -1);
-    const prevAssignments = allAssignments[prevWeekKey] ?? [];
+    await store.fetchWeek(prevWeekKey); // ensure fetched from DB
+
+    // Same-phase week (2 weeks back) — for biweekly recycling route driver logs
+    // e.g., W14 (even/Pottsville) → W12 (even/Pottsville), not W13 (odd/Orwigsburg)
+    const samePhaseWeekKey = navigateWeek(currentWeek, -2);
+    await store.fetchWeek(samePhaseWeekKey); // ensure fetched from DB
+
+    // Re-read from store after fetches complete
+    const freshState = useScheduleStore.getState();
+    const prevWeekAssignments = freshState.assignments[prevWeekKey] ?? [];
+    const prevSamePhaseAssignments = freshState.assignments[samePhaseWeekKey] ?? [];
+
     return autoAssign({
       weekKey: currentWeek,
+      weekPhase,
       assignments,
       routes,
       employees,
       trucks,
       vacationSlots,
       spareSlots,
-      prevAssignments,
+      prevSamePhaseAssignments,
+      prevWeekAssignments,
     });
-  }, [currentWeek, assignments, routes, employees, trucks, vacationSlots, spareSlots, allAssignments]);
+  }, [currentWeek, weekPhase, assignments, routes, employees, trucks, vacationSlots, spareSlots]);
 
   const handleAutoAssignConfirm = useCallback((result: ReturnType<typeof autoAssign>) => {
     saveSnapshot('Auto-assign');
