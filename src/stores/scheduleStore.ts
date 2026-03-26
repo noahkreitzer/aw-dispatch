@@ -246,6 +246,13 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
       if (allPrevSpares) prevSpares = allPrevSpares.map((r) => spareFromDb(r as Record<string, unknown>));
     }
 
+    // Also fetch routes so we can de-conflict by day
+    const { data: routeData } = await supabase.from('dispatch_routes').select('id,day');
+    const routeDayMap = new Map<string, string>();
+    if (routeData) {
+      for (const r of routeData) routeDayMap.set(r.id as string, r.day as string);
+    }
+
     const assignments: Assignment[] = routeIds.map((routeId) => {
       const prev = prevAssignments.find((p) => p.routeId === routeId && p.status !== 'off');
       const a: Assignment = {
@@ -260,6 +267,85 @@ export const useScheduleStore = create<ScheduleState>()((set, get) => ({
       };
       return { ...a, status: computeStatus(a) };
     });
+
+    // De-conflict: if a driver/truck/slinger is on multiple routes the same day,
+    // keep the one from the MOST RECENT week and clear the duplicates.
+    // This happens when a driver switched routes between weeks.
+    const prevWeekLookup = new Map<string, string>(); // routeId → weekKey it came from
+    for (const pa of prevAssignments) {
+      prevWeekLookup.set(pa.routeId, pa.weekKey);
+    }
+    const mostRecentWeek = uniqueWeekKeys[0] ?? '';
+
+    // Group by day
+    const byDay = new Map<string, Assignment[]>();
+    for (const a of assignments) {
+      const day = routeDayMap.get(a.routeId) ?? '';
+      if (!day) continue;
+      const list = byDay.get(day) ?? [];
+      list.push(a);
+      byDay.set(day, list);
+    }
+
+    for (const [, dayAssignments] of byDay) {
+      // De-conflict drivers
+      const driverSeen = new Map<string, Assignment[]>();
+      for (const a of dayAssignments) {
+        if (!a.driverId) continue;
+        const list = driverSeen.get(a.driverId) ?? [];
+        list.push(a);
+        driverSeen.set(a.driverId, list);
+      }
+      for (const [, dups] of driverSeen) {
+        if (dups.length <= 1) continue;
+        // Keep the one from the most recent week, clear the rest
+        for (const a of dups) {
+          const srcWeek = prevWeekLookup.get(a.routeId) ?? '';
+          if (srcWeek !== mostRecentWeek) {
+            a.driverId = null;
+            a.status = computeStatus(a);
+          }
+        }
+      }
+
+      // De-conflict trucks
+      const truckSeen = new Map<string, Assignment[]>();
+      for (const a of dayAssignments) {
+        if (!a.truckId) continue;
+        const list = truckSeen.get(a.truckId) ?? [];
+        list.push(a);
+        truckSeen.set(a.truckId, list);
+      }
+      for (const [, dups] of truckSeen) {
+        if (dups.length <= 1) continue;
+        for (const a of dups) {
+          const srcWeek = prevWeekLookup.get(a.routeId) ?? '';
+          if (srcWeek !== mostRecentWeek) {
+            a.truckId = null;
+            a.status = computeStatus(a);
+          }
+        }
+      }
+
+      // De-conflict slingers
+      const slingerSeen = new Map<string, Assignment[]>();
+      for (const a of dayAssignments) {
+        for (const sid of a.slingerIds) {
+          const list = slingerSeen.get(sid) ?? [];
+          list.push(a);
+          slingerSeen.set(sid, list);
+        }
+      }
+      for (const [sid, dups] of slingerSeen) {
+        if (dups.length <= 1) continue;
+        for (const a of dups) {
+          const srcWeek = prevWeekLookup.get(a.routeId) ?? '';
+          if (srcWeek !== mostRecentWeek) {
+            a.slingerIds = a.slingerIds.filter((id) => id !== sid);
+          }
+        }
+      }
+    }
 
     const spares = ensureSpareSlots(weekKey, prevSpares.map((s) => ({
       ...s, id: `spare_${weekKey}_${s.day}`, weekKey,
