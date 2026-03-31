@@ -99,7 +99,7 @@ export default memo(function DayColumn({ day, date, assignments, weekKey, spareS
   const hasSpare = spareEmployees.length > 0;
 
   return (
-    <div className="day-column flex-1 min-w-[240px] flex flex-col border-r last:border-r-0 bg-gray-50/30">
+    <div className="day-column flex-1 min-w-0 md:min-w-[240px] flex flex-col border-r last:border-r-0 bg-gray-50/30">
       {/* Day Header */}
       <div className="px-2.5 py-1.5 bg-white border-b shrink-0">
         <div className="flex items-center justify-between">

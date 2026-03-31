@@ -9,6 +9,7 @@ import EmployeeManager from '@/components/managers/EmployeeManager';
 import TruckManager from '@/components/managers/TruckManager';
 import RouteManager from '@/components/managers/RouteManager';
 import SettingsPage from '@/components/settings/Settings';
+import MySchedule from '@/components/schedule/MySchedule';
 import { useEmployeeStore } from '@/stores/employeeStore';
 import { useTruckStore } from '@/stores/truckStore';
 import { useRouteStore } from '@/stores/routeStore';
@@ -36,6 +37,7 @@ export default function App() {
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<DispatchBoard />} />
+              <Route path="/my-schedule" element={<MySchedule />} />
               <Route path="/employees" element={<EmployeeManager />} />
               <Route path="/trucks" element={<TruckManager />} />
               <Route path="/routes" element={<RouteManager />} />

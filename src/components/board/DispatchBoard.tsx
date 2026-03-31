@@ -35,6 +35,11 @@ export default function DispatchBoard() {
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [mobileDay, setMobileDay] = useState<typeof DAYS[number]>(() => {
+    const today = new Date().getDay();
+    // 0=Sun,1=Mon,...6=Sat → map to DAYS index
+    return DAYS[Math.max(0, Math.min(today - 1, 5))] ?? 'Monday';
+  });
   const moreRef = useRef<HTMLDivElement>(null);
   const activityRef = useRef<HTMLDivElement>(null);
 
@@ -333,146 +338,199 @@ export default function DispatchBoard() {
   const isCurrentWeek = currentWeek === getISOWeekKey(new Date());
   const readyCount = useMemo(() => assignments.filter((a) => a.status === 'ready').length, [assignments]);
 
+  // Helpers for day tab abbreviations
+  const DAY_SHORT: Record<string, string> = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat' };
+
+  // Build day data once
+  const dayData = useMemo(() => DAYS.map((day, i) => {
+    const dayAssignments = assignments.filter((a) => {
+      const route = routes.find((r) => r.id === a.routeId);
+      return route?.day === day;
+    });
+    return {
+      day,
+      date: weekDays[i] ? formatDate(weekDays[i]) : '',
+      assignments: dayAssignments,
+      spare: spareSlots.find((s) => s.day === day),
+      vacation: vacationSlots.find((v) => v.day === day),
+      conflicts: conflicts.filter((c) => c.day === day),
+      readyCount: dayAssignments.filter((a) => a.status === 'ready').length,
+    };
+  }), [assignments, routes, weekDays, spareSlots, vacationSlots, conflicts]);
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-[calc(100vh-48px)]">
-        {/* Toolbar */}
-        <div className="bg-white border-b px-3 py-1.5 flex items-center justify-between shrink-0">
-          {/* Left: nav + week info */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))}
-              className="p-1 rounded hover:bg-gray-100 transition-colors"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <div className="text-center whitespace-nowrap min-w-[140px]">
-              <p className="font-bold text-[12px] leading-tight">{getWeekDateRange(currentWeek)}</p>
-              <p className="text-[8px] text-gray-400 font-mono">{currentWeek}</p>
-            </div>
-            <button
-              onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))}
-              className="p-1 rounded hover:bg-gray-100 transition-colors"
-            >
-              <ChevronRight size={15} />
-            </button>
-
-            {!isCurrentWeek && (
+        {/* Toolbar — wraps on mobile */}
+        <div className="bg-white border-b px-2 md:px-3 py-1.5 shrink-0">
+          <div className="flex items-center justify-between gap-1">
+            {/* Left: nav + week info */}
+            <div className="flex items-center gap-1 md:gap-1.5 min-w-0">
               <button
-                onClick={() => setCurrentWeek(getISOWeekKey(new Date()))}
-                className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+                onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))}
+                className="p-1 rounded hover:bg-gray-100 transition-colors shrink-0"
               >
-                Today
+                <ChevronLeft size={15} />
               </button>
-            )}
-
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
-              {weekPhase === 'even' ? 'Pottsville' : 'Orwigsburg'}
-            </span>
-
-            <span className="text-[10px] font-mono">
-              <span className="text-green-600 font-bold">{readyCount}</span>
-              <span className="text-gray-300">/{assignments.length}</span>
-            </span>
-          </div>
-
-          {/* Right: actions */}
-          <div className="flex items-center gap-1">
-            <button onClick={handleUndo} disabled={!canUndo()} title="Undo (Ctrl+Z)"
-              className="p-1 rounded hover:bg-gray-100 transition-colors disabled:opacity-20">
-              <Undo2 size={13} />
-            </button>
-            <button onClick={handleRedo} disabled={!canRedo()} title="Redo (Ctrl+Shift+Z)"
-              className="p-1 rounded hover:bg-gray-100 transition-colors disabled:opacity-20">
-              <Redo2 size={13} />
-            </button>
-
-            {/* Activity log */}
-            <div className="relative" ref={activityRef}>
-              <button onClick={() => setActivityOpen(!activityOpen)}
-                className="p-1 rounded hover:bg-gray-100 transition-colors" title="Recent activity">
-                <Clock size={13} className="text-gray-400" />
+              <div className="text-center whitespace-nowrap">
+                <p className="font-bold text-[11px] md:text-[12px] leading-tight">{getWeekDateRange(currentWeek)}</p>
+                <p className="text-[8px] text-gray-400 font-mono">{currentWeek}</p>
+              </div>
+              <button
+                onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))}
+                className="p-1 rounded hover:bg-gray-100 transition-colors shrink-0"
+              >
+                <ChevronRight size={15} />
               </button>
-              {activityOpen && (
-                <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 w-[260px]">
-                  <div className="px-3 py-1.5 border-b text-[10px] font-bold text-gray-500 uppercase tracking-wider">Activity</div>
-                  <ActivityLog />
-                </div>
+
+              {!isCurrentWeek && (
+                <button
+                  onClick={() => setCurrentWeek(getISOWeekKey(new Date()))}
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 transition-colors shrink-0 hidden sm:block"
+                >
+                  Today
+                </button>
               )}
+
+              <span className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full text-white shrink-0 ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
+                {weekPhase === 'even' ? 'Potts' : 'Orwig'}<span className="hidden sm:inline">{weekPhase === 'even' ? 'ville' : 'sburg'}</span>
+              </span>
+
+              <span className="text-[10px] font-mono shrink-0">
+                <span className="text-green-600 font-bold">{readyCount}</span>
+                <span className="text-gray-300">/{assignments.length}</span>
+              </span>
             </div>
 
-            <div className="h-4 w-px bg-gray-200 mx-0.5" />
-
-            <button onClick={() => setAutoAssignOpen(true)}
-              className="text-[10px] font-bold px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1">
-              <Wand2 size={10} />Auto-Fill
-            </button>
-
-            <button onClick={() => setUploadOpen(true)}
-              className="text-[10px] font-medium px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-1">
-              <Upload size={10} />Upload
-            </button>
-
-            {/* More menu */}
-            <div className="relative" ref={moreRef}>
-              <button onClick={() => setMoreOpen(!moreOpen)}
-                className="p-1 rounded hover:bg-gray-100 transition-colors">
-                <MoreHorizontal size={14} />
+            {/* Right: actions */}
+            <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
+              <button onClick={handleUndo} disabled={!canUndo()} title="Undo (Ctrl+Z)"
+                className="p-1 rounded hover:bg-gray-100 transition-colors disabled:opacity-20 hidden sm:block">
+                <Undo2 size={13} />
               </button>
-              {moreOpen && (
-                <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
-                  <button onClick={handleCopyPrevWeek} className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
-                    <Copy size={11} />Copy Prev Week
-                  </button>
-                  <Link to="/employees" onClick={() => setMoreOpen(false)} className="block px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
-                    <Users size={11} />Manage Crew
-                  </Link>
-                </div>
-              )}
-            </div>
+              <button onClick={handleRedo} disabled={!canRedo()} title="Redo (Ctrl+Shift+Z)"
+                className="p-1 rounded hover:bg-gray-100 transition-colors disabled:opacity-20 hidden sm:block">
+                <Redo2 size={13} />
+              </button>
 
-            <button
-              onClick={() => setPoolOpen(!poolOpen)}
-              className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${
-                poolOpen ? 'bg-gray-900 text-white' : 'border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              Pool ({activeEmployees.length})
-            </button>
+              {/* Activity log */}
+              <div className="relative hidden sm:block" ref={activityRef}>
+                <button onClick={() => setActivityOpen(!activityOpen)}
+                  className="p-1 rounded hover:bg-gray-100 transition-colors" title="Recent activity">
+                  <Clock size={13} className="text-gray-400" />
+                </button>
+                {activityOpen && (
+                  <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 w-[260px]">
+                    <div className="px-3 py-1.5 border-b text-[10px] font-bold text-gray-500 uppercase tracking-wider">Activity</div>
+                    <ActivityLog />
+                  </div>
+                )}
+              </div>
+
+              <div className="h-4 w-px bg-gray-200 mx-0.5 hidden sm:block" />
+
+              <button onClick={() => setAutoAssignOpen(true)}
+                className="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-0.5">
+                <Wand2 size={10} /><span className="hidden xs:inline">Auto-</span>Fill
+              </button>
+
+              {/* More menu — includes Upload, Copy, Crew on mobile */}
+              <div className="relative" ref={moreRef}>
+                <button onClick={() => setMoreOpen(!moreOpen)}
+                  className="p-1 rounded hover:bg-gray-100 transition-colors">
+                  <MoreHorizontal size={14} />
+                </button>
+                {moreOpen && (
+                  <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
+                    <button onClick={() => { setUploadOpen(true); setMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
+                      <Upload size={11} />Upload Excel
+                    </button>
+                    <button onClick={handleCopyPrevWeek} className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
+                      <Copy size={11} />Copy Prev Week
+                    </button>
+                    <Link to="/employees" onClick={() => setMoreOpen(false)} className="block px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
+                      <Users size={11} />Manage Crew
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setPoolOpen(!poolOpen)}
+                className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded transition-colors hidden md:block ${
+                  poolOpen ? 'bg-gray-900 text-white' : 'border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                Pool ({activeEmployees.length})
+              </button>
+            </div>
           </div>
+        </div>
+
+        {/* Mobile day tabs — visible only on small screens */}
+        <div className="md:hidden bg-white border-b flex shrink-0 overflow-x-auto">
+          {dayData.map((d) => {
+            const isActive = d.day === mobileDay;
+            const allReady = d.readyCount === d.assignments.length && d.assignments.length > 0;
+            return (
+              <button
+                key={d.day}
+                onClick={() => setMobileDay(d.day)}
+                className={`flex-1 min-w-0 py-1.5 px-1 text-center transition-colors relative
+                  ${isActive ? 'text-gray-900 font-bold' : 'text-gray-400'}`}
+              >
+                <span className="text-[10px] block">{DAY_SHORT[d.day]}</span>
+                <span className="text-[8px] block font-mono">
+                  {allReady ? '✓' : `${d.readyCount}/${d.assignments.length}`}
+                </span>
+                {isActive && <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-gray-900 rounded-full" />}
+                {d.conflicts.length > 0 && <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500" />}
+              </button>
+            );
+          })}
         </div>
 
         {/* Conflict Banner */}
         <ConflictBanner conflicts={conflicts} />
 
-        {/* Board */}
+        {/* Board — desktop: multi-column, mobile: single day */}
         <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 flex overflow-x-auto">
-            {DAYS.map((day, i) => {
-              const dayAssignments = assignments.filter((a) => {
-                const route = routes.find((r) => r.id === a.routeId);
-                return route?.day === day;
-              });
-              const daySpare = spareSlots.find((s) => s.day === day);
-              const dayVacation = vacationSlots.find((v) => v.day === day);
-              const dayConflicts = conflicts.filter((c) => c.day === day);
-              return (
-                <DayColumn
-                  key={day}
-                  day={day}
-                  date={weekDays[i] ? formatDate(weekDays[i]) : ''}
-                  assignments={dayAssignments}
-                  weekKey={currentWeek}
-                  spareSlot={daySpare}
-                  vacationSlot={dayVacation}
-                  conflicts={dayConflicts}
-                />
-              );
-            })}
+          {/* Desktop columns */}
+          <div className="flex-1 hidden md:flex overflow-x-auto">
+            {dayData.map((d) => (
+              <DayColumn
+                key={d.day}
+                day={d.day}
+                date={d.date}
+                assignments={d.assignments}
+                weekKey={currentWeek}
+                spareSlot={d.spare}
+                vacationSlot={d.vacation}
+                conflicts={d.conflicts}
+              />
+            ))}
+          </div>
+
+          {/* Mobile single day */}
+          <div className="flex-1 md:hidden overflow-y-auto">
+            {dayData.filter((d) => d.day === mobileDay).map((d) => (
+              <DayColumn
+                key={d.day}
+                day={d.day}
+                date={d.date}
+                assignments={d.assignments}
+                weekKey={currentWeek}
+                spareSlot={d.spare}
+                vacationSlot={d.vacation}
+                conflicts={d.conflicts}
+              />
+            ))}
           </div>
 
           {poolOpen && (
-            <EmployeePool employees={activeEmployees} />
+            <div className="hidden md:block">
+              <EmployeePool employees={activeEmployees} />
+            </div>
           )}
         </div>
       </div>
