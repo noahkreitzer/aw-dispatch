@@ -12,24 +12,23 @@ function timeAgo(ts: number): string {
 export default memo(function ActivityLog() {
   const past = useUndoStore((s) => s.past);
 
-  // Show last 8 actions, newest first
   const recent = [...past].reverse().slice(0, 8);
 
   if (recent.length === 0) {
     return (
-      <div className="p-3 text-center text-[10px] text-gray-400">
+      <div className="p-4 text-center text-[12px] text-gray-400">
         No changes this session
       </div>
     );
   }
 
   return (
-    <div className="max-h-[200px] overflow-y-auto">
+    <div className="max-h-[220px] overflow-y-auto">
       {recent.map((snapshot, i) => (
-        <div key={`${snapshot.timestamp}-${i}`} className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 text-[10px]">
-          <Clock size={9} className="text-gray-300 shrink-0" />
+        <div key={`${snapshot.timestamp}-${i}`} className="flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 text-[12px] transition-colors">
+          <Clock size={11} className="text-gray-300 shrink-0" />
           <span className="text-gray-600 truncate">{snapshot.label}</span>
-          <span className="text-gray-300 shrink-0 ml-auto font-mono">{timeAgo(snapshot.timestamp)}</span>
+          <span className="text-gray-300 shrink-0 ml-auto text-[11px] tabular-nums">{timeAgo(snapshot.timestamp)}</span>
         </div>
       ))}
     </div>

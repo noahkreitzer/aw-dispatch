@@ -81,11 +81,11 @@ export default function RouteManager() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-2xl font-bold">Routes</h1>
-          <p className="text-sm text-muted-foreground font-mono">
+          <h1 className="text-xl font-semibold tracking-tight">Routes</h1>
+          <p className="text-sm text-gray-500">
             {routes.filter((r) => r.active).length} active · {routes.length} total
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function RouteManager() {
           variant={dayFilter === 'all' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setDayFilter('all')}
-          className="font-mono text-xs"
+          className="text-xs"
         >
           All
         </Button>
@@ -109,24 +109,24 @@ export default function RouteManager() {
             variant={dayFilter === d ? 'default' : 'outline'}
             size="sm"
             onClick={() => setDayFilter(d)}
-            className="font-mono text-xs"
+            className="text-xs"
           >
             {dayAbbr[d]}
           </Button>
         ))}
       </div>
 
-      <Card>
+      <Card className="rounded-xl shadow-sm ring-1 ring-gray-200/60 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="font-mono">Route</TableHead>
-              <TableHead className="font-mono">Municipality</TableHead>
-              <TableHead className="font-mono">Day</TableHead>
-              <TableHead className="font-mono">Type</TableHead>
-              <TableHead className="font-mono">Stops</TableHead>
-              <TableHead className="font-mono">Status</TableHead>
-              <TableHead className="font-mono w-24">Actions</TableHead>
+              <TableHead>Route</TableHead>
+              <TableHead>Municipality</TableHead>
+              <TableHead>Day</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Stops</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,18 +141,18 @@ export default function RouteManager() {
                 <TableCell className="text-sm text-muted-foreground">{r.municipality}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <Badge variant="outline" className="font-mono text-xs">{dayAbbr[r.day]}</Badge>
+                    <Badge variant="outline" className="text-xs">{dayAbbr[r.day]}</Badge>
                     {r.biweekly && <Badge className="text-[9px] bg-amber-500 text-white">Bi-weekly</Badge>}
                   </div>
                 </TableCell>
                 <TableCell>
                   <Badge className={`font-mono text-xs ${typeColors[r.type]}`}>{r.type}</Badge>
                 </TableCell>
-                <TableCell className="font-mono">{r.stops}</TableCell>
+                <TableCell className="">{r.stops}</TableCell>
                 <TableCell>
                   <Badge
                     variant={r.active ? 'default' : 'secondary'}
-                    className={`font-mono text-xs ${r.active ? 'bg-green-600 text-white' : ''}`}
+                    className={`text-xs ${r.active ? 'bg-green-600 text-white' : ''}`}
                   >
                     {r.active ? 'Active' : 'Inactive'}
                   </Badge>
@@ -174,20 +174,20 @@ export default function RouteManager() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-heading">{editingId ? 'Edit Route' : 'Add Route'}</DialogTitle>
+            <DialogTitle>{editingId ? 'Edit Route' : 'Add Route'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div>
-              <Label className="font-mono text-xs">Route Name</Label>
+              <Label className="text-xs">Route Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Pottsville Trash" />
             </div>
             <div>
-              <Label className="font-mono text-xs">Municipality</Label>
+              <Label className="text-xs">Municipality</Label>
               <Input value={form.municipality} onChange={(e) => setForm({ ...form, municipality: e.target.value })} placeholder="Pottsville" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="font-mono text-xs">Day</Label>
+                <Label className="text-xs">Day</Label>
                 <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v as DayOfWeek })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -196,7 +196,7 @@ export default function RouteManager() {
                 </Select>
               </div>
               <div>
-                <Label className="font-mono text-xs">Type</Label>
+                <Label className="text-xs">Type</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as Route['type'] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -207,7 +207,7 @@ export default function RouteManager() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="font-mono text-xs">Estimated Stops</Label>
+                <Label className="text-xs">Estimated Stops</Label>
                 <Input type="number" value={form.stops} onChange={(e) => setForm({ ...form, stops: Number(e.target.value) })} />
               </div>
               <div className="flex flex-col gap-2 pb-1">
@@ -219,7 +219,7 @@ export default function RouteManager() {
                     className="rounded"
                     id="route-active"
                   />
-                  <Label htmlFor="route-active" className="font-mono text-xs">Active</Label>
+                  <Label htmlFor="route-active" className="text-xs">Active</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -229,7 +229,7 @@ export default function RouteManager() {
                     className="rounded"
                     id="route-biweekly"
                   />
-                  <Label htmlFor="route-biweekly" className="font-mono text-xs">Bi-weekly</Label>
+                  <Label htmlFor="route-biweekly" className="text-xs">Bi-weekly</Label>
                 </div>
               </div>
             </div>

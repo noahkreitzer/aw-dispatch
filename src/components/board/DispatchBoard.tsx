@@ -361,95 +361,95 @@ export default function DispatchBoard() {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col h-[calc(100vh-48px)]">
-        {/* Toolbar — wraps on mobile */}
-        <div className="bg-white border-b px-2 md:px-3 py-1.5 shrink-0">
-          <div className="flex items-center justify-between gap-1">
+        {/* Toolbar */}
+        <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/60 px-3 md:px-4 py-2 shrink-0">
+          <div className="flex items-center justify-between gap-2">
             {/* Left: nav + week info */}
-            <div className="flex items-center gap-1 md:gap-1.5 min-w-0">
+            <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
               <button
                 onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))}
-                className="p-1 rounded hover:bg-gray-100 transition-colors shrink-0"
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
               >
-                <ChevronLeft size={15} />
+                <ChevronLeft size={16} />
               </button>
               <div className="text-center whitespace-nowrap">
-                <p className="font-bold text-[11px] md:text-[12px] leading-tight">{getWeekDateRange(currentWeek)}</p>
-                <p className="text-[8px] text-gray-400 font-mono">{currentWeek}</p>
+                <p className="font-semibold text-[12px] md:text-[13px] leading-tight">{getWeekDateRange(currentWeek)}</p>
+                <p className="text-[9px] text-gray-400">{currentWeek}</p>
               </div>
               <button
                 onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))}
-                className="p-1 rounded hover:bg-gray-100 transition-colors shrink-0"
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
               >
-                <ChevronRight size={15} />
+                <ChevronRight size={16} />
               </button>
 
               {!isCurrentWeek && (
                 <button
                   onClick={() => setCurrentWeek(getISOWeekKey(new Date()))}
-                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 transition-colors shrink-0 hidden sm:block"
+                  className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors shrink-0 hidden sm:block"
                 >
                   Today
                 </button>
               )}
 
-              <span className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full text-white shrink-0 ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
+              <span className={`text-[10px] md:text-[11px] font-semibold px-2.5 py-0.5 rounded-full text-white shrink-0 ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
                 {weekPhase === 'even' ? 'Potts' : 'Orwig'}<span className="hidden sm:inline">{weekPhase === 'even' ? 'ville' : 'sburg'}</span>
               </span>
 
-              <span className="text-[10px] font-mono shrink-0">
-                <span className="text-green-600 font-bold">{readyCount}</span>
+              <span className="text-[11px] shrink-0 tabular-nums">
+                <span className="text-green-600 font-semibold">{readyCount}</span>
                 <span className="text-gray-300">/{assignments.length}</span>
               </span>
             </div>
 
             {/* Right: actions */}
-            <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
+            <div className="flex items-center gap-1 md:gap-1.5 shrink-0">
               <button onClick={handleUndo} disabled={!canUndo()} title="Undo (Ctrl+Z)"
-                className="p-1 rounded hover:bg-gray-100 transition-colors disabled:opacity-20 hidden sm:block">
-                <Undo2 size={13} />
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-20 hidden sm:block">
+                <Undo2 size={14} />
               </button>
               <button onClick={handleRedo} disabled={!canRedo()} title="Redo (Ctrl+Shift+Z)"
-                className="p-1 rounded hover:bg-gray-100 transition-colors disabled:opacity-20 hidden sm:block">
-                <Redo2 size={13} />
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-20 hidden sm:block">
+                <Redo2 size={14} />
               </button>
 
               {/* Activity log */}
               <div className="relative hidden sm:block" ref={activityRef}>
                 <button onClick={() => setActivityOpen(!activityOpen)}
-                  className="p-1 rounded hover:bg-gray-100 transition-colors" title="Recent activity">
-                  <Clock size={13} className="text-gray-400" />
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Recent activity">
+                  <Clock size={14} className="text-gray-400" />
                 </button>
                 {activityOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 w-[260px]">
-                    <div className="px-3 py-1.5 border-b text-[10px] font-bold text-gray-500 uppercase tracking-wider">Activity</div>
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg ring-1 ring-gray-200/60 z-50 w-[280px] overflow-hidden">
+                    <div className="px-4 py-2.5 border-b text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Activity</div>
                     <ActivityLog />
                   </div>
                 )}
               </div>
 
-              <div className="h-4 w-px bg-gray-200 mx-0.5 hidden sm:block" />
+              <div className="h-5 w-px bg-gray-200 mx-1 hidden sm:block" />
 
               <button onClick={() => setAutoAssignOpen(true)}
-                className="text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-0.5">
-                <Wand2 size={10} /><span className="hidden xs:inline">Auto-</span>Fill
+                className="text-[11px] md:text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center gap-1 shadow-sm">
+                <Wand2 size={12} /><span className="hidden xs:inline">Auto-</span>Fill
               </button>
 
-              {/* More menu — includes Upload, Copy, Crew on mobile */}
+              {/* More menu */}
               <div className="relative" ref={moreRef}>
                 <button onClick={() => setMoreOpen(!moreOpen)}
-                  className="p-1 rounded hover:bg-gray-100 transition-colors">
-                  <MoreHorizontal size={14} />
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                  <MoreHorizontal size={16} />
                 </button>
                 {moreOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
-                    <button onClick={() => { setUploadOpen(true); setMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
-                      <Upload size={11} />Upload Excel
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg ring-1 ring-gray-200/60 py-1 z-50 min-w-[180px] overflow-hidden">
+                    <button onClick={() => { setUploadOpen(true); setMoreOpen(false); }} className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-gray-50 flex items-center gap-2.5 transition-colors">
+                      <Upload size={14} className="text-gray-400" />Upload Excel
                     </button>
-                    <button onClick={handleCopyPrevWeek} className="w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
-                      <Copy size={11} />Copy Prev Week
+                    <button onClick={handleCopyPrevWeek} className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-gray-50 flex items-center gap-2.5 transition-colors">
+                      <Copy size={14} className="text-gray-400" />Copy Prev Week
                     </button>
-                    <Link to="/employees" onClick={() => setMoreOpen(false)} className="block px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2">
-                      <Users size={11} />Manage Crew
+                    <Link to="/employees" onClick={() => setMoreOpen(false)} className="block px-4 py-2.5 text-[12px] hover:bg-gray-50 flex items-center gap-2.5 transition-colors">
+                      <Users size={14} className="text-gray-400" />Manage Crew
                     </Link>
                   </div>
                 )}
@@ -457,8 +457,8 @@ export default function DispatchBoard() {
 
               <button
                 onClick={() => setPoolOpen(!poolOpen)}
-                className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 rounded transition-colors hidden md:block ${
-                  poolOpen ? 'bg-gray-900 text-white' : 'border border-gray-200 hover:bg-gray-50'
+                className={`text-[11px] font-medium px-3 py-1.5 rounded-lg transition-colors hidden md:block ${
+                  poolOpen ? 'bg-gray-900 text-white' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
                 Pool ({activeEmployees.length})
@@ -467,8 +467,8 @@ export default function DispatchBoard() {
           </div>
         </div>
 
-        {/* Mobile day tabs — visible only on small screens */}
-        <div className="md:hidden bg-white border-b flex shrink-0 overflow-x-auto">
+        {/* Mobile day tabs */}
+        <div className="md:hidden bg-white/90 backdrop-blur-sm border-b border-gray-200/60 flex shrink-0 px-2 gap-1 py-1.5">
           {dayData.map((d) => {
             const isActive = d.day === mobileDay;
             const allReady = d.readyCount === d.assignments.length && d.assignments.length > 0;
@@ -476,15 +476,14 @@ export default function DispatchBoard() {
               <button
                 key={d.day}
                 onClick={() => setMobileDay(d.day)}
-                className={`flex-1 min-w-0 py-1.5 px-1 text-center transition-colors relative
-                  ${isActive ? 'text-gray-900 font-bold' : 'text-gray-400'}`}
+                className={`flex-1 min-w-0 py-1.5 px-1 text-center transition-all duration-200 rounded-lg relative
+                  ${isActive ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-400 hover:bg-gray-100'}`}
               >
-                <span className="text-[10px] block">{DAY_SHORT[d.day]}</span>
-                <span className="text-[8px] block font-mono">
+                <span className="text-[11px] font-medium block">{DAY_SHORT[d.day]}</span>
+                <span className="text-[9px] block tabular-nums">
                   {allReady ? '✓' : `${d.readyCount}/${d.assignments.length}`}
                 </span>
-                {isActive && <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-gray-900 rounded-full" />}
-                {d.conflicts.length > 0 && <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500" />}
+                {d.conflicts.length > 0 && <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />}
               </button>
             );
           })}
@@ -537,9 +536,9 @@ export default function DispatchBoard() {
 
       <DragOverlay>
         {activeEmployee && (
-          <div className="px-3 py-1.5 bg-[#F5C400] text-[#1A1A1A] rounded shadow-lg font-mono text-sm font-semibold cursor-grabbing">
+          <div className="px-3.5 py-2 bg-white rounded-xl shadow-xl ring-1 ring-gray-200 text-[13px] font-semibold cursor-grabbing">
             {activeEmployee.name}
-            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-white/30 font-bold">{activeEmployee.role}</span>
+            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">{activeEmployee.role}</span>
           </div>
         )}
       </DragOverlay>

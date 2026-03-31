@@ -26,29 +26,24 @@ export default function MySchedule() {
   const weekDays = useMemo(() => getWeekDays(currentWeek), [currentWeek]);
   const weekPhase = useMemo(() => getWeekPhase(currentWeek), [currentWeek]);
 
-  // Fetch week data
   useEffect(() => {
     fetchWeek(currentWeek);
   }, [currentWeek, fetchWeek]);
 
-  // Save selection
   useEffect(() => {
     if (selectedId) localStorage.setItem(STORAGE_KEY, selectedId);
   }, [selectedId]);
 
-  // Find this employee's assignments for the week
   const myWeek = useMemo(() => {
     if (!selectedId) return [];
     return DAYS.filter(d => d !== 'Saturday').map((day, i) => {
       const date = weekDays[i] ? formatDate(weekDays[i]) : '';
 
-      // Check vacation
       const vac = vacations.find((v) => v.day === day);
       if (vac?.employeeIds.includes(selectedId)) {
         return { day, date, type: 'off' as const, route: null, truck: null, role: null, coworkers: [] };
       }
 
-      // Find assignment where this employee is driver or slinger
       const match = assignments.find((a) => {
         const route = routes.find((r) => r.id === a.routeId);
         if (route?.day !== day) return false;
@@ -63,7 +58,6 @@ export default function MySchedule() {
       const truck = match.truckId ? trucks.find((t) => t.id === match.truckId) : null;
       const role = match.driverId === selectedId ? 'Driver' : 'Slinger';
 
-      // Coworkers
       const coworkers: string[] = [];
       if (match.driverId && match.driverId !== selectedId) {
         const d = employees.find((e) => e.id === match.driverId);
@@ -80,18 +74,18 @@ export default function MySchedule() {
   }, [selectedId, assignments, vacations, routes, trucks, employees, weekDays]);
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-4">
+    <div className="max-w-lg mx-auto px-4 py-6">
       {/* Header */}
-      <div className="text-center mb-4">
-        <h1 className="text-lg font-bold">My Schedule</h1>
-        <p className="text-xs text-gray-400">Select your name to see your assignments</p>
+      <div className="text-center mb-5">
+        <h1 className="text-xl font-semibold tracking-tight">My Schedule</h1>
+        <p className="text-[13px] text-gray-400 mt-0.5">Select your name to see your week</p>
       </div>
 
       {/* Employee picker */}
       <select
         value={selectedId}
         onChange={(e) => setSelectedId(e.target.value)}
-        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-medium bg-white focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 outline-none mb-4"
+        className="w-full px-4 py-3 rounded-xl bg-white text-[14px] font-medium shadow-sm ring-1 ring-gray-200/60 focus:ring-2 focus:ring-blue-300 outline-none mb-5 appearance-none"
       >
         <option value="">Choose your name...</option>
         {activeEmployees.map((e) => (
@@ -100,73 +94,73 @@ export default function MySchedule() {
       </select>
 
       {/* Week nav */}
-      <div className="flex items-center justify-center gap-3 mb-4">
-        <button onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))} className="p-1.5 rounded-lg hover:bg-gray-100">
-          <ChevronLeft size={18} />
+      <div className="flex items-center justify-center gap-4 mb-5">
+        <button onClick={() => setCurrentWeek(navigateWeek(currentWeek, -1))} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <ChevronLeft size={20} />
         </button>
         <div className="text-center">
-          <p className="text-sm font-bold">{getWeekDateRange(currentWeek)}</p>
-          <div className="flex items-center justify-center gap-2 mt-0.5">
-            <span className="text-[9px] text-gray-400 font-mono">{currentWeek}</span>
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
+          <p className="text-[14px] font-semibold">{getWeekDateRange(currentWeek)}</p>
+          <div className="flex items-center justify-center gap-2 mt-1">
+            <span className="text-[10px] text-gray-400">{currentWeek}</span>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full text-white ${weekPhase === 'even' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
               {weekPhase === 'even' ? 'Pottsville' : 'Orwigsburg'}
             </span>
           </div>
         </div>
-        <button onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))} className="p-1.5 rounded-lg hover:bg-gray-100">
-          <ChevronRight size={18} />
+        <button onClick={() => setCurrentWeek(navigateWeek(currentWeek, 1))} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <ChevronRight size={20} />
         </button>
       </div>
 
       {/* Schedule cards */}
       {selectedId && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {myWeek.map((entry) => (
             <div
               key={entry.day}
-              className={`rounded-lg border p-3 ${
+              className={`rounded-xl p-4 shadow-sm transition-colors ${
                 entry.type === 'assigned'
-                  ? 'border-green-200 bg-green-50/50'
+                  ? 'bg-white ring-1 ring-green-200'
                   : entry.type === 'off'
-                  ? 'border-red-200 bg-red-50/50'
-                  : 'border-gray-200 bg-gray-50/50'
+                  ? 'bg-red-50/80 ring-1 ring-red-200'
+                  : 'bg-gray-50 ring-1 ring-gray-100'
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-sm">{entry.day}</span>
-                <span className="text-[10px] text-gray-400 font-mono">{entry.date}</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-semibold text-[14px]">{entry.day}</span>
+                <span className="text-[11px] text-gray-400">{entry.date}</span>
               </div>
 
               {entry.type === 'off' && (
-                <span className="text-xs font-medium text-red-500">Off / Vacation</span>
+                <span className="text-[13px] font-medium text-red-500">Off / Vacation</span>
               )}
 
               {entry.type === 'unassigned' && (
-                <span className="text-xs text-gray-400">Not assigned</span>
+                <span className="text-[13px] text-gray-400">Not assigned</span>
               )}
 
               {entry.type === 'assigned' && entry.route && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={12} className="text-gray-400 shrink-0" />
-                    <span className="text-sm font-medium">{entry.route.name}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white ml-auto ${
-                      entry.role === 'Driver' ? 'bg-blue-500' : 'bg-slate-500'
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <MapPin size={14} className="text-gray-400 shrink-0" />
+                    <span className="text-[14px] font-medium">{entry.route.name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold text-white ml-auto ${
+                      entry.role === 'Driver' ? 'bg-blue-500' : 'bg-gray-500'
                     }`}>
                       {entry.role}
                     </span>
                   </div>
 
                   {entry.truck && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Truck size={12} className="shrink-0" />
+                    <div className="flex items-center gap-2.5 text-[13px] text-gray-500">
+                      <Truck size={14} className="shrink-0" />
                       <span>Truck #{entry.truck.number} ({entry.truck.type})</span>
                     </div>
                   )}
 
                   {entry.coworkers.length > 0 && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Users size={12} className="shrink-0" />
+                    <div className="flex items-center gap-2.5 text-[13px] text-gray-500">
+                      <Users size={14} className="shrink-0" />
                       <span>{entry.coworkers.join(', ')}</span>
                     </div>
                   )}
@@ -178,9 +172,9 @@ export default function MySchedule() {
       )}
 
       {!selectedId && (
-        <div className="text-center py-12 text-gray-300">
-          <UserCheck size={40} className="mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Pick your name above</p>
+        <div className="text-center py-16 text-gray-300">
+          <UserCheck size={44} className="mx-auto mb-3 opacity-20" />
+          <p className="text-[14px]">Pick your name above</p>
         </div>
       )}
     </div>

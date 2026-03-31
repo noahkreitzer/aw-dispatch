@@ -215,11 +215,11 @@ export default function EmployeeManager() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-2xl font-bold">Employee Roster</h1>
-          <p className="text-sm text-muted-foreground font-mono">
+          <h1 className="text-xl font-semibold tracking-tight">Employee Roster</h1>
+          <p className="text-sm text-gray-500">
             {employees.filter((e) => e.active).length} active · {employees.length} total
           </p>
         </div>
@@ -240,7 +240,7 @@ export default function EmployeeManager() {
         <Card className="mb-4 border-[#F5C400] bg-[#F5C400]/10">
           <CardContent className="py-3 flex items-center gap-2 text-sm">
             <AlertCircle size={16} className="text-[#F5C400]" />
-            <span className="font-mono">
+            <span className="">
               {missingPhones} active employee{missingPhones > 1 ? 's' : ''} missing phone numbers.
               SMS dispatch won't work without them.
             </span>
@@ -259,22 +259,22 @@ export default function EmployeeManager() {
             variant={filter === f ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter(f)}
-            className="font-mono text-xs"
+            className=" text-xs"
           >
             {f === 'all' ? 'All' : f === 'driver' ? 'Drivers' : 'Slingers'}
           </Button>
         ))}
       </div>
 
-      <Card>
+      <Card className="rounded-xl shadow-sm ring-1 ring-gray-200/60 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="font-mono">Name</TableHead>
-              <TableHead className="font-mono">Role</TableHead>
-              <TableHead className="font-mono">Phone</TableHead>
-              <TableHead className="font-mono">Status</TableHead>
-              <TableHead className="font-mono w-24">Actions</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -290,17 +290,17 @@ export default function EmployeeManager() {
                 <TableCell className="font-medium">{emp.name}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <Badge variant={emp.role === 'driver' ? 'default' : 'secondary'} className="font-mono text-xs">
+                    <Badge variant={emp.role === 'driver' ? 'default' : 'secondary'} className=" text-xs">
                       {emp.role}
                     </Badge>
                     {emp.canDrive && emp.role === 'slinger' && (
-                      <Badge variant="outline" className="font-mono text-[10px] border-blue-300 text-blue-600">
+                      <Badge variant="outline" className=" text-[10px] border-blue-300 text-blue-600">
                         +DRV
                       </Badge>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="font-mono text-sm">
+                <TableCell className=" text-sm">
                   {emp.phone ? formatPhone(emp.phone) : (
                     <span className="text-destructive text-xs">Missing</span>
                   )}
@@ -308,7 +308,7 @@ export default function EmployeeManager() {
                 <TableCell>
                   <Badge
                     variant={emp.active ? 'default' : 'secondary'}
-                    className={`font-mono text-xs ${emp.active ? 'bg-green-600 text-white' : ''}`}
+                    className={`text-xs ${emp.active ? 'bg-green-600 text-white' : ''}`}
                   >
                     {emp.active ? 'Active' : 'Inactive'}
                   </Badge>
@@ -333,13 +333,13 @@ export default function EmployeeManager() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-heading">
+            <DialogTitle>
               {editingId ? 'Edit Employee' : 'Add Employee'}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div>
-              <Label className="font-mono text-xs">Name</Label>
+              <Label className=" text-xs">Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -347,7 +347,7 @@ export default function EmployeeManager() {
               />
             </div>
             <div>
-              <Label className="font-mono text-xs">Role</Label>
+              <Label className=" text-xs">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as 'driver' | 'slinger' })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -365,13 +365,13 @@ export default function EmployeeManager() {
                   className="rounded accent-blue-600"
                   id="candrive-check"
                 />
-                <Label htmlFor="candrive-check" className="font-mono text-xs cursor-pointer">
+                <Label htmlFor="candrive-check" className=" text-xs cursor-pointer">
                   Can also drive <span className="text-muted-foreground">(dual role)</span>
                 </Label>
               </div>
             )}
             <div>
-              <Label className="font-mono text-xs">Phone</Label>
+              <Label className=" text-xs">Phone</Label>
               <Input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -386,7 +386,7 @@ export default function EmployeeManager() {
                 className="rounded"
                 id="active-check"
               />
-              <Label htmlFor="active-check" className="font-mono text-xs">Active</Label>
+              <Label htmlFor="active-check" className=" text-xs">Active</Label>
             </div>
           </div>
           <DialogFooter>
@@ -400,12 +400,12 @@ export default function EmployeeManager() {
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-heading">Import Employee Data</DialogTitle>
+            <DialogTitle>Import Employee Data</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Card className="bg-muted/50">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-mono">Upload a File</CardTitle>
+                <CardTitle className="text-sm">Upload a File</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground mb-3">
@@ -424,16 +424,16 @@ export default function EmployeeManager() {
               </CardContent>
             </Card>
 
-            <div className="text-center text-xs text-muted-foreground font-mono">— OR —</div>
+            <div className="text-center text-xs text-gray-400">— OR —</div>
 
             <div>
-              <Label className="font-mono text-xs">Paste Data</Label>
+              <Label className=" text-xs">Paste Data</Label>
               <Textarea
                 rows={10}
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder={`Paste CSV/TSV data here. Accepted formats:\n\nWith headers:\nName, Role, Phone, License\nMike Barletta, Driver, 5705551234, CDL-A\nTony Ferris, Slinger, 5705555678\n\nSimple (name, phone):\nMike Barletta, 5705551234\nTony Ferris, 5705555678`}
-                className="font-mono text-xs"
+                className=" text-xs"
               />
             </div>
 

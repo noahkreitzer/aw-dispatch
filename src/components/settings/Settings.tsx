@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Download, Upload, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,7 +25,6 @@ export default function SettingsPage() {
 
   const [localTemplate, setLocalTemplate] = useState(dispatchTemplate);
 
-  // Live preview with sample data
   const sampleEmployee: Employee = { id: '', name: 'Mike Barletta', role: 'driver', phone: '5705551234', active: true };
   const sampleTruck: Truck = { id: '', number: '101', type: 'rear-load', status: 'active' };
   const sampleRoute: RouteType = { id: '', name: 'Pottsville Trash', municipality: 'Pottsville', day: 'Monday', type: 'residential', stops: 180, active: true };
@@ -141,34 +139,35 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="font-heading text-2xl font-bold">Settings</h1>
+    <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6">
+      <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
 
       {/* Company Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">Company</CardTitle>
+      <Card className="rounded-xl shadow-sm ring-1 ring-gray-200/60">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[15px] font-semibold">Company</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label className="font-mono text-xs">Company Name</Label>
+            <Label className="text-xs text-gray-500">Company Name</Label>
             <Input
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
+              className="mt-1"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Dispatch Template */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">Dispatch Message Template</CardTitle>
+      <Card className="rounded-xl shadow-sm ring-1 ring-gray-200/60">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[15px] font-semibold">Dispatch Message Template</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex flex-wrap gap-1.5 mb-2">
             {['{name}', '{day}', '{truckNumber}', '{truckType}', '{routeName}', '{driverName}', '{slingers}'].map((token) => (
-              <Badge key={token} variant="outline" className="font-mono text-[10px] cursor-pointer"
+              <Badge key={token} variant="outline" className="text-[11px] cursor-pointer hover:bg-gray-100 transition-colors rounded-lg px-2 py-0.5"
                 onClick={() => setLocalTemplate((t) => t + token)}>
                 {token}
               </Badge>
@@ -178,70 +177,68 @@ export default function SettingsPage() {
             rows={4}
             value={localTemplate}
             onChange={(e) => setLocalTemplate(e.target.value)}
-            className="font-mono text-sm"
+            className="text-sm"
           />
           <div>
-            <Label className="font-mono text-xs text-muted-foreground">Preview</Label>
-            <div className="bg-muted/50 rounded p-3 text-sm font-mono whitespace-pre-wrap">
+            <Label className="text-xs text-gray-500">Preview</Label>
+            <div className="bg-gray-50 rounded-xl p-4 text-[13px] whitespace-pre-wrap mt-1">
               {previewMessage}
             </div>
           </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={saveTemplate}>Save Template</Button>
             <Button variant="outline" size="sm" onClick={resetTemplate}>
-              <RotateCcw size={14} className="mr-1" /> Reset to Default
+              <RotateCcw size={14} className="mr-1" /> Reset
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Separator />
-
       {/* Data Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">Data Management</CardTitle>
+      <Card className="rounded-xl shadow-sm ring-1 ring-gray-200/60">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[15px] font-semibold">Data Management</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button variant="outline" onClick={exportAllData}>
-              <Download size={14} className="mr-1" /> Export Full Backup (JSON)
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Button variant="outline" size="sm" onClick={exportAllData}>
+              <Download size={14} className="mr-1.5" /> Full Backup
             </Button>
-            <Button variant="outline" onClick={importAllData}>
-              <Upload size={14} className="mr-1" /> Import Backup (JSON)
+            <Button variant="outline" size="sm" onClick={importAllData}>
+              <Upload size={14} className="mr-1.5" /> Import Backup
             </Button>
-            <Button variant="outline" onClick={exportCSV}>
-              <Download size={14} className="mr-1" /> Export Schedule (CSV)
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download size={14} className="mr-1.5" /> Export CSV
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground font-mono">
+          <p className="text-[12px] text-gray-400">
             Backup includes all employees, trucks, routes, weekly schedules, and settings.
           </p>
         </CardContent>
       </Card>
 
       {/* Data Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">Current Data</CardTitle>
+      <Card className="rounded-xl shadow-sm ring-1 ring-gray-200/60">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[15px] font-semibold">Current Data</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="font-mono text-2xl font-bold">{employees.length}</p>
-              <p className="text-xs text-muted-foreground font-mono">Employees</p>
+            <div className="bg-gray-50 rounded-xl py-3">
+              <p className="text-2xl font-semibold tabular-nums">{employees.length}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Employees</p>
             </div>
-            <div>
-              <p className="font-mono text-2xl font-bold">{trucks.length}</p>
-              <p className="text-xs text-muted-foreground font-mono">Trucks</p>
+            <div className="bg-gray-50 rounded-xl py-3">
+              <p className="text-2xl font-semibold tabular-nums">{trucks.length}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Trucks</p>
             </div>
-            <div>
-              <p className="font-mono text-2xl font-bold">{routes.length}</p>
-              <p className="text-xs text-muted-foreground font-mono">Routes</p>
+            <div className="bg-gray-50 rounded-xl py-3">
+              <p className="text-2xl font-semibold tabular-nums">{routes.length}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Routes</p>
             </div>
-            <div>
-              <p className="font-mono text-2xl font-bold">{Object.keys(scheduleAssignments).length}</p>
-              <p className="text-xs text-muted-foreground font-mono">Weeks Scheduled</p>
+            <div className="bg-gray-50 rounded-xl py-3">
+              <p className="text-2xl font-semibold tabular-nums">{Object.keys(scheduleAssignments).length}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">Weeks</p>
             </div>
           </div>
         </CardContent>
