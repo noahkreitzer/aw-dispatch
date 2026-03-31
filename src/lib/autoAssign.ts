@@ -20,6 +20,20 @@ export interface AutoAssignResult {
   changes: string[]; // human-readable log of what changed
 }
 
+/** Tag an assignment's notes with an [auto] marker for balanced/fallback fills */
+function addAutoTag(notes: string, tag: string): string {
+  const existing = notes ? notes.replace(/\[auto:.*?\]/g, '').trim() : '';
+  const tags = notes.match(/\[auto:(.*?)\]/g)?.map((t) => t.slice(6, -1)) ?? [];
+  tags.push(tag);
+  const autoStr = tags.map((t) => `[auto:${t}]`).join('');
+  return existing ? `${existing} ${autoStr}` : autoStr;
+}
+
+/** Check if an employee was auto-filled (balanced fallback, not from driver logs) */
+export function isAutoFilled(notes: string, employeeId: string): boolean {
+  return notes?.includes(`[auto:driver:${employeeId}]`) || notes?.includes(`[auto:slinger:${employeeId}]`) || false;
+}
+
 /**
  * Smart auto-assign: fills in missing drivers, trucks, and slingers
  * based on the DRIVER LOGS from the previous same-phase week.
@@ -88,8 +102,7 @@ export function autoAssign(input: AutoAssignInput): AutoAssignResult {
   const truckTypePreference: Record<string, string[]> = {
     residential: ['rear-load', 'side-load'],
     commercial: ['rear-load', 'side-load'],
-    recycling: ['recycling', 'side-load', 'rear-load'],
-    'roll-off': ['roll-off'],
+    recycling: ['rear-load', 'side-load'],
   };
 
   // Group result assignments by day
@@ -152,7 +165,7 @@ export function autoAssign(input: AutoAssignInput): AutoAssignResult {
         }
       }
 
-      // Fallback: least-busy available driver
+      // Fallback: least-busy available driver — mark as auto-filled
       const available = activeDrivers.filter(
         (e) => !usedDrivers.has(e.id) && !unavailable.has(e.id)
       );
@@ -165,7 +178,8 @@ export function autoAssign(input: AutoAssignInput): AutoAssignResult {
         const chosen = available[0];
         a.driverId = chosen.id;
         usedDrivers.add(chosen.id);
-        changes.push(`${day}: ${route.name} driver = ${chosen.name} (balanced)`);
+        a.notes = addAutoTag(a.notes, `driver:${chosen.id}`);
+        changes.push(`${day}: ${route.name} driver = ${chosen.name} (balanced*)`);
       }
     }
 
@@ -231,7 +245,7 @@ export function autoAssign(input: AutoAssignInput): AutoAssignResult {
         }
       }
 
-      // Fallback: least-busy available slinger
+      // Fallback: least-busy available slinger — mark as auto-filled
       if (a.slingerIds.length === 0) {
         const available = activeSlingers.filter(
           (e) => !usedSlingers.has(e.id) && !unavailable.has(e.id)
@@ -248,7 +262,8 @@ export function autoAssign(input: AutoAssignInput): AutoAssignResult {
           const chosen = available[0];
           a.slingerIds = [chosen.id];
           usedSlingers.add(chosen.id);
-          changes.push(`${day}: ${route.name} slinger = ${chosen.name} (balanced)`);
+          a.notes = addAutoTag(a.notes, `slinger:${chosen.id}`);
+          changes.push(`${day}: ${route.name} slinger = ${chosen.name} (balanced*)`);
         }
       }
     }

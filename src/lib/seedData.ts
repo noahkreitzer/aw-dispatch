@@ -56,7 +56,7 @@ export const seedTrucks: Truck[] = [
   { id: 't11', number: '113', type: 'rear-load', status: 'active' },
   { id: 't12', number: '114', type: 'rear-load', status: 'active' },
   { id: 't13', number: '150', type: 'rear-load', status: 'active' },
-  { id: 't14', number: '402', type: 'roll-off', status: 'active' },
+  { id: 't14', number: '402', type: 'rear-load', status: 'active' },
 ];
 
 export const seedRoutes: Route[] = [

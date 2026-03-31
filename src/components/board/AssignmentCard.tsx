@@ -9,6 +9,7 @@ import type { Assignment, DayOfWeek } from '@/types';
 import { MessageSquare, X, Power, AlertTriangle } from 'lucide-react';
 import DispatchModal from './DispatchModal';
 import type { Conflict } from '@/lib/conflicts';
+import { isAutoFilled } from '@/lib/autoAssign';
 
 interface AssignmentCardProps {
   assignment: Assignment;
@@ -184,7 +185,7 @@ export default memo(function AssignmentCard({ assignment, weekKey, day, conflict
           >
             {driver ? (
               <div className="flex items-center justify-between gap-1">
-                <DraggableEmployee employeeId={driver.id} assignmentId={assignment.id} name={driver.name} role="driver" />
+                <DraggableEmployee employeeId={driver.id} assignmentId={assignment.id} name={isAutoFilled(assignment.notes, driver.id) ? `${driver.name} *` : driver.name} role="driver" />
                 <button onClick={removeDriver} className="p-0.5 rounded hover:bg-red-50 transition-colors shrink-0">
                   <X size={11} className="text-gray-300 hover:text-red-500" />
                 </button>
@@ -205,7 +206,7 @@ export default memo(function AssignmentCard({ assignment, weekKey, day, conflict
               <div className="flex flex-wrap gap-1">
                 {slingers.map((s) => (
                   <div key={s.id} className="flex items-center gap-0.5">
-                    <DraggableEmployee employeeId={s.id} assignmentId={assignment.id} name={s.name} role="slinger" />
+                    <DraggableEmployee employeeId={s.id} assignmentId={assignment.id} name={isAutoFilled(assignment.notes, s.id) ? `${s.name} *` : s.name} role="slinger" />
                     <button onClick={() => removeSlinger(s.id)} className="p-0.5 rounded hover:bg-red-50 transition-colors">
                       <X size={11} className="text-gray-300 hover:text-red-500" />
                     </button>
