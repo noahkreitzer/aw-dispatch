@@ -36,8 +36,6 @@ export default function MySchedule() {
     if (selectedId) localStorage.setItem(STORAGE_KEY, selectedId);
   }, [selectedId]);
 
-  const selectedEmployee = useMemo(() => employees.find((e) => e.id === selectedId), [employees, selectedId]);
-
   // Find this employee's assignments for the week
   const myWeek = useMemo(() => {
     if (!selectedId) return [];
