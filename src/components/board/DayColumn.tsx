@@ -37,17 +37,17 @@ function DraggableSpareEmployee({ employeeId, day, weekKey, name }: {
   const removeFromSpare = useScheduleStore((s) => s.removeFromSpare);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       <span
         ref={setNodeRef} {...listeners} {...attributes}
-        className={`crew-chip inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-grab select-none
+        className={`crew-chip inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-grab select-none
           bg-amber-50 text-amber-700 border border-amber-200 ${isDragging ? 'opacity-30' : ''}`}
       >
         {name}
       </span>
       <button onClick={() => removeFromSpare(weekKey, day, employeeId)}
         className="p-0.5 rounded hover:bg-red-50 transition-colors">
-        <X size={11} className="text-gray-400 hover:text-red-500" />
+        <X size={9} className="text-gray-400 hover:text-red-500" />
       </button>
     </div>
   );
@@ -59,14 +59,14 @@ function VacationEmployee({ employeeId, day, weekKey, name }: {
   const removeFromVacation = useScheduleStore((s) => s.removeFromVacation);
 
   return (
-    <div className="flex items-center gap-1">
-      <span className="crew-chip inline-flex items-center px-2 py-1 rounded-md text-xs font-medium
+    <div className="flex items-center gap-0.5">
+      <span className="crew-chip inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium
         bg-red-50 text-red-600 border border-red-200">
         {name}
       </span>
       <button onClick={() => removeFromVacation(weekKey, day, employeeId)}
         className="p-0.5 rounded hover:bg-red-50 transition-colors">
-        <X size={11} className="text-gray-400 hover:text-red-500" />
+        <X size={9} className="text-gray-400 hover:text-red-500" />
       </button>
     </div>
   );
@@ -95,18 +95,20 @@ export default memo(function DayColumn({ day, date, assignments, weekKey, spareS
   });
 
   const readyCount = assignments.filter((a) => a.status === 'ready').length;
+  const hasVacation = vacationEmployees.length > 0;
+  const hasSpare = spareEmployees.length > 0;
 
   return (
-    <div className="day-column flex-1 min-w-[260px] flex flex-col border-r last:border-r-0 bg-gray-50/30">
+    <div className="day-column flex-1 min-w-[240px] flex flex-col border-r last:border-r-0 bg-gray-50/30">
       {/* Day Header */}
-      <div className="px-3 py-2 bg-white border-b shrink-0">
+      <div className="px-2.5 py-1.5 bg-white border-b shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${DAY_COLORS[day]}`} />
-            <span className="font-bold text-sm">{day}</span>
-            <span className="text-[10px] text-gray-400 font-mono">{date}</span>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${DAY_COLORS[day]}`} />
+            <span className="font-bold text-xs">{day}</span>
+            <span className="text-[9px] text-gray-400 font-mono">{date}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] font-mono">
+          <div className="flex items-center gap-1 text-[9px] font-mono">
             <span className="text-gray-400">{assignments.length}</span>
             {readyCount > 0 && readyCount === assignments.length && (
               <span className="text-green-500 font-bold">✓</span>
@@ -118,12 +120,10 @@ export default memo(function DayColumn({ day, date, assignments, weekKey, spareS
         </div>
       </div>
 
-      {/* Cards - GPU accelerated scroll */}
-      <div className="flex-1 overflow-y-auto gpu-scroll p-1.5 space-y-1.5">
+      {/* Cards */}
+      <div className="flex-1 overflow-y-auto gpu-scroll p-1 space-y-1">
         {assignments.length === 0 && (
-          <div className="text-center text-xs text-gray-400 py-8 font-medium">
-            No routes
-          </div>
+          <div className="text-center text-[10px] text-gray-400 py-8">No routes</div>
         )}
         {assignments.map((assignment) => (
           <AssignmentCard
@@ -134,40 +134,43 @@ export default memo(function DayColumn({ day, date, assignments, weekKey, spareS
             conflicts={conflicts.filter((c) => c.assignmentIds.includes(assignment.id))}
           />
         ))}
+      </div>
 
+      {/* Bottom zones — compact, side by side */}
+      <div className="shrink-0 border-t bg-white/80 px-1 py-1 flex gap-1">
         {/* Vacation zone */}
         <div
           ref={vacationDropRef}
-          className={`rounded-lg border-2 border-dashed p-2 transition-all duration-150
-            ${isVacationOver ? 'border-red-400 bg-red-50 scale-[1.01]' : 'border-red-200/30 bg-red-50/10'}`}
+          className={`flex-1 rounded border border-dashed p-1 min-h-[24px] transition-all duration-150
+            ${isVacationOver ? 'border-red-400 bg-red-50' : hasVacation ? 'border-red-200 bg-red-50/50' : 'border-gray-200/50'}`}
         >
-          <span className="text-[9px] font-bold text-red-400 uppercase tracking-wider">Off / Vacation</span>
-          {vacationEmployees.length > 0 ? (
-            <div className="flex flex-wrap gap-1 mt-1">
+          <span className="text-[7px] font-bold text-red-300 uppercase tracking-wider">Off</span>
+          {hasVacation ? (
+            <div className="flex flex-wrap gap-0.5 mt-0.5">
               {vacationEmployees.map((emp) => (
                 <VacationEmployee key={emp.id} employeeId={emp.id} day={day} weekKey={weekKey} name={emp.name} />
               ))}
             </div>
-          ) : (
-            <p className="text-[9px] text-gray-300 mt-0.5">Drop here</p>
+          ) : !isVacationOver ? null : (
+            <p className="text-[8px] text-gray-300 mt-0.5">Drop here</p>
           )}
         </div>
 
         {/* Spare zone */}
         <div
           ref={spareDropRef}
-          className={`rounded-lg border-2 border-dashed p-2 transition-all duration-150
-            ${isSpareOver ? 'border-amber-400 bg-amber-50 scale-[1.01]' : 'border-amber-200/30 bg-amber-50/10'}`}
+          className={`flex-1 rounded border border-dashed p-1 min-h-[24px] transition-all duration-150
+            ${isSpareOver ? 'border-amber-400 bg-amber-50' : hasSpare ? 'border-amber-200 bg-amber-50/50' : 'border-gray-200/50'}`}
         >
-          <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider">Spare</span>
-          {spareEmployees.length > 0 ? (
-            <div className="flex flex-wrap gap-1 mt-1">
+          <span className="text-[7px] font-bold text-amber-300 uppercase tracking-wider">Spare</span>
+          {hasSpare ? (
+            <div className="flex flex-wrap gap-0.5 mt-0.5">
               {spareEmployees.map((emp) => (
                 <DraggableSpareEmployee key={emp.id} employeeId={emp.id} day={day} weekKey={weekKey} name={emp.name} />
               ))}
             </div>
-          ) : (
-            <p className="text-[9px] text-gray-300 mt-0.5">Drop here</p>
+          ) : !isSpareOver ? null : (
+            <p className="text-[8px] text-gray-300 mt-0.5">Drop here</p>
           )}
         </div>
       </div>
